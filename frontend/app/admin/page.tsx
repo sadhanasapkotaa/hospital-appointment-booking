@@ -119,7 +119,7 @@ export default function AdminDashboard() {
         </thead>
         <tbody className="divide-y divide-gray-100">
           {users.map((user, index) => (
-            <tr key={user.id} className={`table-row fade-in stagger-${(index % 3) + 1}`}>
+            <tr key={user.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-6 py-4">
                 <div className="flex items-center">
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-sm mr-3">
@@ -139,20 +139,21 @@ export default function AdminDashboard() {
                 <div className="flex items-center space-x-2">
                   <button 
                     onClick={() => openModal("view", user)}
-                    className="icon-btn icon-btn-view"
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
                     title="View Details"
                   >
                     <FiEye size={16} />
                   </button>
                   <button 
                     onClick={() => openModal("edit", user)}
-                    className="icon-btn icon-btn-edit"
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors duration-200"
                     title="Edit User"
                   >
                     <FiEdit3 size={16} />
                   </button>
                   <button 
-                    className="icon-btn icon-btn-delete"
+                    onClick={() => handleDelete(user.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
                     title="Delete User"
                   >
                     <FiTrash2 size={16} />
@@ -170,141 +171,319 @@ export default function AdminDashboard() {
     if (!showModal) return null;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-          <h3 className="text-lg font-semibold mb-4">
-            {modalType === "add" ? `Add New ${activeTab.slice(0, -1)}` : 
-             modalType === "edit" ? `Edit ${activeTab.slice(0, -1)}` : 
-             `View ${activeTab.slice(0, -1)} Details`}
-          </h3>
-          
-          {modalType === "view" && selectedUser ? (
-            <div className="space-y-3">
-              <div><strong>Name:</strong> {selectedUser.name}</div>
-              <div><strong>Email:</strong> {selectedUser.email}</div>
-              <div><strong>Phone:</strong> {selectedUser.phone}</div>
-              {activeTab === "patients" && (
-                <>
-                  <div><strong>Age:</strong> {selectedUser.age}</div>
-                  <div><strong>Gender:</strong> {selectedUser.gender}</div>
-                  <div><strong>Address:</strong> {selectedUser.address}</div>
-                </>
-              )}
-              {activeTab === "receptionists" && (
-                <>
-                  <div><strong>Department:</strong> {selectedUser.department}</div>
-                  <div><strong>Shift:</strong> {selectedUser.shift}</div>
-                </>
-              )}
-              {activeTab === "doctors" && (
-                <>
-                  <div><strong>Specialty:</strong> {selectedUser.specialty}</div>
-                  <div><strong>Experience:</strong> {selectedUser.experience}</div>
-                </>
-              )}
-            </div>
-          ) : (
-            <form className="space-y-4">
-              <input
-                type="text"
-                placeholder="Name"
-                defaultValue={selectedUser?.name || ""}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                defaultValue={selectedUser?.email || ""}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="tel"
-                placeholder="Phone"
-                defaultValue={selectedUser?.phone || ""}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              
-              {activeTab === "patients" && (
-                <>
-                  <input
-                    type="number"
-                    placeholder="Age"
-                    defaultValue={selectedUser?.age || ""}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <select
-                    defaultValue={selectedUser?.gender || ""}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                  <textarea
-                    placeholder="Address"
-                    defaultValue={selectedUser?.address || ""}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={3}
-                  />
-                </>
-              )}
-              
-              {activeTab === "receptionists" && (
-                <>
-                  <input
-                    type="text"
-                    placeholder="Department"
-                    defaultValue={selectedUser?.department || ""}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <select
-                    defaultValue={selectedUser?.shift || ""}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Shift</option>
-                    <option value="Morning">Morning</option>
-                    <option value="Evening">Evening</option>
-                    <option value="Night">Night</option>
-                  </select>
-                </>
-              )}
-              
-              {activeTab === "doctors" && (
-                <>
-                  <input
-                    type="text"
-                    placeholder="Specialty"
-                    defaultValue={selectedUser?.specialty || ""}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Experience"
-                    defaultValue={selectedUser?.experience || ""}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </>
-              )}
-            </form>
-          )}
-          
-          <div className="flex justify-end space-x-3 mt-6">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h3 className="text-xl font-bold text-gray-900">
+              {modalType === "add" ? `Add New ${activeTab.slice(0, -1)}` : 
+               modalType === "edit" ? `Edit ${activeTab.slice(0, -1)}` : 
+               `${activeTab.slice(0, -1)} Details`}
+            </h3>
             <button
               onClick={closeModal}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              {modalType === "view" ? "Close" : "Cancel"}
+              <FiX size={20} className="text-gray-500" />
             </button>
-            {modalType !== "view" && (
-              <button
-                onClick={closeModal}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              >
-                {modalType === "add" ? "Add" : "Save"}
-              </button>
+          </div>
+          
+          <div className="p-6">
+            {modalType === "view" && selectedUser ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <p className="text-gray-900">{selectedUser.name}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <p className="text-gray-900">{selectedUser.email}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <p className="text-gray-900">{selectedUser.phone}</p>
+                </div>
+                
+                {activeTab === "patients" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                        <p className="text-gray-900">{selectedUser.age}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                        <p className="text-gray-900">{selectedUser.gender}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                      <p className="text-gray-900">{selectedUser.address}</p>
+                    </div>
+                  </>
+                )}
+                
+                {activeTab === "receptionists" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                      <p className="text-gray-900">{selectedUser.department}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
+                      <p className="text-gray-900">{selectedUser.shift}</p>
+                    </div>
+                  </div>
+                )}
+                
+                {activeTab === "doctors" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Specialty</label>
+                      <p className="text-gray-900">{selectedUser.specialty}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Experience</label>
+                      <p className="text-gray-900">{selectedUser.experience}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {/* Common Fields */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name || ''}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter full name"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email || ''}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter email address"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone || ''}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter phone number"
+                    required
+                  />
+                </div>
+                
+                {/* Patient-specific fields */}
+                {activeTab === "patients" && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Age *
+                        </label>
+                        <input
+                          type="number"
+                          name="age"
+                          value={formData.age || ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          placeholder="Age"
+                          min="1"
+                          max="120"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Gender *
+                        </label>
+                        <select
+                          name="gender"
+                          value={formData.gender || ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          required
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Address *
+                      </label>
+                      <textarea
+                        name="address"
+                        value={formData.address || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter full address"
+                        rows={3}
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+                
+                {/* Receptionist-specific fields */}
+                {activeTab === "receptionists" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Department *
+                      </label>
+                      <select
+                        name="department"
+                        value={formData.department || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">Select Department</option>
+                        <option value="Front Desk">Front Desk</option>
+                        <option value="Appointments">Appointments</option>
+                        <option value="Billing">Billing</option>
+                        <option value="Insurance">Insurance</option>
+                        <option value="Medical Records">Medical Records</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Shift *
+                      </label>
+                      <select
+                        name="shift"
+                        value={formData.shift || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">Select Shift</option>
+                        <option value="Morning">Morning (7 AM - 3 PM)</option>
+                        <option value="Evening">Evening (3 PM - 11 PM)</option>
+                        <option value="Night">Night (11 PM - 7 AM)</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                
+                {/* Doctor-specific fields */}
+                {activeTab === "doctors" && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Specialty *
+                      </label>
+                      <select
+                        name="specialty"
+                        value={formData.specialty || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">Select Specialty</option>
+                        <option value="Cardiology">Cardiology</option>
+                        <option value="Dermatology">Dermatology</option>
+                        <option value="Neurology">Neurology</option>
+                        <option value="Orthopedics">Orthopedics</option>
+                        <option value="Pediatrics">Pediatrics</option>
+                        <option value="General Medicine">General Medicine</option>
+                        <option value="Surgery">Surgery</option>
+                        <option value="Gynecology">Gynecology</option>
+                        <option value="Psychiatry">Psychiatry</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Experience *
+                      </label>
+                      <select
+                        name="experience"
+                        value={formData.experience || ''}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">Select Experience</option>
+                        <option value="1-2 years">1-2 years</option>
+                        <option value="3-5 years">3-5 years</option>
+                        <option value="6-10 years">6-10 years</option>
+                        <option value="11-15 years">11-15 years</option>
+                        <option value="16-20 years">16-20 years</option>
+                        <option value="20+ years">20+ years</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                
+                {/* Form Actions */}
+                <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {modalType === "add" ? "Add" : "Save Changes"}
+                  </button>
+                </div>
+              </form>
             )}
           </div>
+          
+          {/* View Mode Actions */}
+          {modalType === "view" && (
+            <div className="px-6 pb-6">
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={closeModal}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => openModal("edit", selectedUser)}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Edit
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -339,14 +518,14 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-6">
-        <div className="fade-in mb-8">
+        <div className="mb-8">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2">Admin Dashboard</h1>
           <p className="text-gray-600">Manage hospital staff and patients with ease</p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="stats-card stats-card-1 fade-in stagger-1">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-2xl shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center mb-2">
@@ -362,7 +541,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           
-          <div className="stats-card stats-card-2 fade-in stagger-2">
+          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-6 rounded-2xl shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center mb-2">
@@ -378,7 +557,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           
-          <div className="stats-card stats-card-3 fade-in stagger-3">
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 rounded-2xl shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center mb-2">
@@ -396,7 +575,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Panel */}
-        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl overflow-hidden fade-in">
+        <div className="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl overflow-hidden">
           {/* Tabs */}
           <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-1">
             <div className="flex space-x-1">
@@ -404,7 +583,11 @@ export default function AdminDashboard() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`tab-button ${activeTab === tab ? 'active' : 'text-gray-500 hover:text-gray-700'} capitalize px-6 py-4 rounded-xl transition-all duration-300`}
+                  className={`px-6 py-4 rounded-xl transition-all duration-300 capitalize font-medium ${
+                    activeTab === tab 
+                      ? 'bg-blue-600 text-white shadow-lg' 
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                  }`}
                 >
                   {tab}
                 </button>
@@ -421,7 +604,7 @@ export default function AdminDashboard() {
               </div>
               <button
                 onClick={() => openModal("add")}
-                className="btn-primary flex items-center space-x-2"
+                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
               >
                 <FiUserPlus size={18} />
                 <span>Add {activeTab.slice(0, -1)}</span>
@@ -435,7 +618,7 @@ export default function AdminDashboard() {
                 <input
                   type="text"
                   placeholder={`Search ${activeTab}...`}
-                  className="input-field pl-12 text-sm"
+                  className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
               <div className="flex items-center space-x-4">
