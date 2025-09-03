@@ -1,102 +1,176 @@
 import React from "react";
-import { FiCalendar, FiClock, FiUser, FiLogOut, FiPlus } from "react-icons/fi";
+import { FiCalendar, FiClock, FiUser, FiLogOut, FiPlus, FiHeart, FiTrash2 } from "react-icons/fi";
 
 export default function PatientDashboard() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <div className="flex justify-between items-center px-6 py-4 border-b bg-white shadow-sm">
-        <div className="flex items-center space-x-2">
-          <span className="text-blue-600 text-2xl">❤</span>
-          <span className="text-xl font-semibold text-blue-600">HealthPal</span>
-        </div>
-        <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-600">Welcome, John Doe (user)</span>
-          <button className="flex items-center space-x-1 px-3 py-1 border rounded-md hover:bg-gray-100 text-sm">
-            <FiLogOut size={14} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold mb-1">Welcome back, John Doe</h1>
-            <p className="text-sm text-gray-600">Manage your appointments and health records</p>
-          </div>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-black text-white rounded-lg shadow hover:bg-gray-800 text-sm">
-            <FiPlus size={16} />
-            <span>Book Appointment</span>
-          </button>
-        </div>
-
-        {/* Appointment Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="p-4 bg-white border rounded-lg shadow-sm">
-            <div className="flex items-center mb-2">
-              <FiCalendar className="text-blue-600 mr-2" size={20} />
-              <span className="text-sm font-medium text-gray-700">Total Appointments</span>
-            </div>
-            <p className="text-2xl font-bold">1</p>
-          </div>
-          <div className="p-4 bg-white border rounded-lg shadow-sm">
-            <div className="flex items-center mb-2">
-              <FiClock className="text-blue-600 mr-2" size={20} />
-              <span className="text-sm font-medium text-gray-700">Upcoming</span>
-            </div>
-            <p className="text-2xl font-bold">1</p>
-          </div>
-          <div className="p-4 bg-white border rounded-lg shadow-sm">
-            <div className="flex items-center mb-2">
-              <FiUser className="text-blue-600 mr-2" size={20} />
-              <span className="text-sm font-medium text-gray-700">Completed</span>
-            </div>
-            <p className="text-2xl font-bold">0</p>
-          </div>
-        </div>
-
-        {/* Appointments List */}
-        <div className="bg-white border rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-semibold mb-1">Your Appointments</h2>
-          <p className="text-sm text-gray-600 mb-6">View and manage your scheduled appointments</p>
-
-          {/* Appointment Card */}
-          <div className="border rounded-lg p-4">
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg text-gray-900 mb-2">Dr. Sarah Johnson</h3>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium">
-                    Cardiology
-                  </span>
-                  <span className="px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium">
-                    confirmed
-                  </span>
-                </div>
-                <div className="space-y-1 text-sm text-gray-600">
-                  <div className="flex items-center">
-                    <FiCalendar size={14} className="mr-2" />
-                    <span>9/1/2025</span>
-                  </div>
-                  <div className="flex items-center">
-                    <FiClock size={14} className="mr-2" />
-                    <span>10:00</span>
-                  </div>
-                  <p className="mt-2">Reason: Regular checkup</p>
-                </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-lg shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center">
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-2 rounded-xl mr-3">
+                <FiHeart className="h-8 w-8 text-white" />
               </div>
-              <button className="flex items-center space-x-1 px-3 py-1 border border-red-300 text-red-600 rounded-md hover:bg-red-50 text-sm">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                <span>Cancel</span>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  HealthPal
+                </h1>
+                <p className="text-sm text-gray-600">Patient Dashboard</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2 rounded-xl">
+                <span className="text-sm font-medium text-blue-700">John Doe (Patient)</span>
+              </div>
+              <button className="btn-primary flex items-center space-x-2">
+                <FiLogOut size={16} />
+                <span>Logout</span>
               </button>
             </div>
           </div>
         </div>
-      </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Section */}
+        <div className="flex justify-between items-start mb-8 fade-in">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
+              Welcome back, John Doe
+            </h1>
+            <p className="text-gray-600">Manage your appointments and health records</p>
+          </div>
+          <button className="btn-primary flex items-center space-x-2">
+            <FiPlus size={18} />
+            <span>Book Appointment</span>
+          </button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="stats-card fade-in stagger-1">
+            <div className="flex items-center">
+              <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg">
+                <FiCalendar className="h-6 w-6 text-white" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Appointments</p>
+                <p className="text-2xl font-bold text-gray-900">1</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="stats-card fade-in stagger-2">
+            <div className="flex items-center">
+              <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg">
+                <FiClock className="h-6 w-6 text-white" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Upcoming</p>
+                <p className="text-2xl font-bold text-gray-900">1</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="stats-card fade-in stagger-3">
+            <div className="flex items-center">
+              <div className="p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-lg">
+                <FiUser className="h-6 w-6 text-white" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Completed</p>
+                <p className="text-2xl font-bold text-gray-900">0</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Appointments List */}
+        <div className="animate-card fade-in stagger-2">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
+            <div className="flex items-center mb-6">
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl mr-3">
+                <FiCalendar className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Your Appointments</h2>
+                <p className="text-sm text-gray-600">View and manage your scheduled appointments</p>
+              </div>
+            </div>
+
+            {/* Appointment Card */}
+            <div className="appointment-card fade-in stagger-1">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <div className="flex items-center mb-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
+                      SJ
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">Dr. Sarah Johnson</h3>
+                      <p className="text-sm text-gray-600">Cardiology Specialist</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-3 mb-4">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800">
+                      Cardiology
+                    </span>
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-100 to-green-200 text-green-800">
+                      Confirmed
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-600">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg mr-3">
+                        <FiCalendar size={16} className="text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-700">Date</p>
+                        <p>September 1, 2025</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="p-2 bg-gradient-to-r from-green-100 to-green-200 rounded-lg mr-3">
+                        <FiClock size={16} className="text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-700">Time</p>
+                        <p>10:00 AM</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl">
+                    <p className="text-sm font-medium text-gray-700 mb-1">Reason for Visit</p>
+                    <p className="text-sm text-gray-600">Regular checkup and consultation</p>
+                  </div>
+                </div>
+                
+                <div className="ml-6">
+                  <button className="icon-btn icon-btn-delete" title="Cancel Appointment">
+                    <FiTrash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Empty State for additional appointments */}
+            <div className="mt-8 text-center py-8">
+              <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiPlus size={24} className="text-gray-400" />
+              </div>
+              <p className="text-gray-500 text-sm">No more appointments scheduled</p>
+              <button className="btn-secondary mt-4">
+                Book Another Appointment
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
