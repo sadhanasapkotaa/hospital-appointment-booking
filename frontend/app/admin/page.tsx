@@ -2,36 +2,95 @@
 import React, { useState } from "react";
 import { FiUsers, FiUserPlus, FiEdit3, FiTrash2, FiLogOut, FiSearch, FiFilter, FiEye, FiX } from "react-icons/fi";
 
+// Define types
+type UserType = 'patients' | 'receptionists' | 'doctors';
+type ModalType = 'add' | 'edit' | 'view';
+
+interface Patient {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  age: number;
+  gender: string;
+  address: string;
+}
+
+interface Receptionist {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+  shift: string;
+}
+
+interface Doctor {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  specialty: string;
+  experience: string;
+}
+
+type User = Patient | Receptionist | Doctor;
+
+// Type guard functions
+const isPatient = (user: User): user is Patient => {
+  return 'age' in user && 'gender' in user && 'address' in user;
+};
+
+const isReceptionist = (user: User): user is Receptionist => {
+  return 'department' in user && 'shift' in user;
+};
+
+const isDoctor = (user: User): user is Doctor => {
+  return 'specialty' in user && 'experience' in user;
+};
+
+const isPatientData = (data: any): data is Patient => {
+  return Boolean(data.name && data.email && data.phone && data.age && data.gender && data.address);
+};
+
+const isReceptionistData = (data: any): data is Receptionist => {
+  return Boolean(data.name && data.email && data.phone && data.department && data.shift);
+};
+
+const isDoctorData = (data: any): data is Doctor => {
+  return Boolean(data.name && data.email && data.phone && data.specialty && data.experience);
+};
+
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState("patients");
+  const [activeTab, setActiveTab] = useState<UserType>("patients");
   const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState("add"); // add, edit, view
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [formData, setFormData] = useState({});
+  const [modalType, setModalType] = useState<ModalType>("add");
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [formData, setFormData] = useState<Partial<User>>({});
 
   // Sample data - in real app, this would come from an API
-  const [patients, setPatients] = useState([
+  const [patients, setPatients] = useState<Patient[]>([
     { id: 1, name: "John Doe", email: "john@email.com", phone: "+1234567890", age: 35, gender: "Male", address: "123 Main St" },
     { id: 2, name: "Jane Smith", email: "jane@email.com", phone: "+1234567891", age: 28, gender: "Female", address: "456 Oak Ave" },
   ]);
 
-  const [receptionists, setReceptionists] = useState([
+  const [receptionists, setReceptionists] = useState<Receptionist[]>([
     { id: 1, name: "Mary Wilson", email: "mary@hospital.com", phone: "+1234567892", department: "Front Desk", shift: "Morning" },
     { id: 2, name: "Lisa Johnson", email: "lisa@hospital.com", phone: "+1234567893", department: "Appointments", shift: "Evening" },
   ]);
 
-  const [doctors, setDoctors] = useState([
+  const [doctors, setDoctors] = useState<Doctor[]>([
     { id: 1, name: "Dr. Sarah Johnson", email: "sarah@hospital.com", phone: "+1234567894", specialty: "Cardiology", experience: "10 years" },
     { id: 2, name: "Dr. Michael Chen", email: "michael@hospital.com", phone: "+1234567895", specialty: "Dermatology", experience: "8 years" },
   ]);
 
-  const openModal = (type, user = null) => {
+  const openModal = (type: ModalType, user: User | null = null) => {
     setModalType(type);
     setSelectedUser(user);
     if (type === "add") {
       // Initialize empty form data based on tab
       if (activeTab === "patients") {
-        setFormData({ name: '', email: '', phone: '', age: '', gender: '', address: '' });
+        setFormData({ name: '', email: '', phone: '', age: 0, gender: '', address: '' });
       } else if (activeTab === "receptionists") {
         setFormData({ name: '', email: '', phone: '', department: '', shift: '' });
       } else if (activeTab === "doctors") {
@@ -49,34 +108,39 @@ export default function AdminDashboard() {
     setFormData({});
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: name === 'age' ? Number(value) : value 
+    }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (modalType === "add") {
       // Generate new ID
       const newId = Math.max(...getCurrentUsers().map(u => u.id)) + 1;
-      const newUser = { id: newId, ...formData };
       
-      // Add to appropriate list
-      if (activeTab === "patients") {
-        setPatients(prev => [...prev, newUser]);
-      } else if (activeTab === "receptionists") {
-        setReceptionists(prev => [...prev, newUser]);
-      } else if (activeTab === "doctors") {
-        setDoctors(prev => [...prev, newUser]);
+      // Add to appropriate list with proper typing
+      if (activeTab === "patients" && isPatientData(formData)) {
+        const newPatient: Patient = { ...formData, id: newId };
+        setPatients(prev => [...prev, newPatient]);
+      } else if (activeTab === "receptionists" && isReceptionistData(formData)) {
+        const newReceptionist: Receptionist = { ...formData, id: newId };
+        setReceptionists(prev => [...prev, newReceptionist]);
+      } else if (activeTab === "doctors" && isDoctorData(formData)) {
+        const newDoctor: Doctor = { ...formData, id: newId };
+        setDoctors(prev => [...prev, newDoctor]);
       }
-    } else if (modalType === "edit") {
+    } else if (modalType === "edit" && selectedUser) {
       // Update existing user
-      if (activeTab === "patients") {
+      if (activeTab === "patients" && isPatientData(formData)) {
         setPatients(prev => prev.map(p => p.id === selectedUser.id ? { ...p, ...formData } : p));
-      } else if (activeTab === "receptionists") {
+      } else if (activeTab === "receptionists" && isReceptionistData(formData)) {
         setReceptionists(prev => prev.map(r => r.id === selectedUser.id ? { ...r, ...formData } : r));
-      } else if (activeTab === "doctors") {
+      } else if (activeTab === "doctors" && isDoctorData(formData)) {
         setDoctors(prev => prev.map(d => d.id === selectedUser.id ? { ...d, ...formData } : d));
       }
     }
@@ -84,7 +148,7 @@ export default function AdminDashboard() {
     closeModal();
   };
 
-  const handleDelete = (userId) => {
+  const handleDelete = (userId: number) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       if (activeTab === "patients") {
         setPatients(prev => prev.filter(p => p.id !== userId));
@@ -96,14 +160,14 @@ export default function AdminDashboard() {
     }
   };
 
-  const getCurrentUsers = () => {
+  const getCurrentUsers = (): User[] => {
     if (activeTab === "patients") return patients;
     if (activeTab === "receptionists") return receptionists;
     if (activeTab === "doctors") return doctors;
     return [];
   };
 
-  const renderUserTable = (users, userType) => (
+  const renderUserTable = (users: User[], userType: UserType) => (
     <div className="overflow-x-auto">
       <table className="min-w-full">
         <thead>
@@ -118,7 +182,7 @@ export default function AdminDashboard() {
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
-          {users.map((user, index) => (
+          {users.map((user: User, index: number) => (
             <tr key={user.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-6 py-4">
                 <div className="flex items-center">
@@ -132,7 +196,9 @@ export default function AdminDashboard() {
               <td className="px-6 py-4 text-sm text-gray-600">{user.phone}</td>
               <td className="px-6 py-4">
                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800">
-                  {userType === "patients" ? user.age : userType === "receptionists" ? user.department : user.specialty}
+                  {userType === "patients" && isPatient(user) ? user.age : 
+                   userType === "receptionists" && isReceptionist(user) ? user.department : 
+                   userType === "doctors" && isDoctor(user) ? user.specialty : ''}
                 </span>
               </td>
               <td className="px-6 py-4">
@@ -206,7 +272,7 @@ export default function AdminDashboard() {
                   <p className="text-gray-900">{selectedUser.phone}</p>
                 </div>
                 
-                {activeTab === "patients" && (
+                {activeTab === "patients" && selectedUser && isPatient(selectedUser) && (
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -225,7 +291,7 @@ export default function AdminDashboard() {
                   </>
                 )}
                 
-                {activeTab === "receptionists" && (
+                {activeTab === "receptionists" && selectedUser && isReceptionist(selectedUser) && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
@@ -238,7 +304,7 @@ export default function AdminDashboard() {
                   </div>
                 )}
                 
-                {activeTab === "doctors" && (
+                {activeTab === "doctors" && selectedUser && isDoctor(selectedUser) && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Specialty</label>
@@ -310,7 +376,7 @@ export default function AdminDashboard() {
                         <input
                           type="number"
                           name="age"
-                          value={formData.age || ''}
+                          value={(formData as any).age || ''}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="Age"
@@ -325,7 +391,7 @@ export default function AdminDashboard() {
                         </label>
                         <select
                           name="gender"
-                          value={formData.gender || ''}
+                          value={(formData as any).gender || ''}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           required
@@ -343,7 +409,7 @@ export default function AdminDashboard() {
                       </label>
                       <textarea
                         name="address"
-                        value={formData.address || ''}
+                        value={(formData as any).address || ''}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Enter full address"
@@ -363,7 +429,7 @@ export default function AdminDashboard() {
                       </label>
                       <select
                         name="department"
-                        value={formData.department || ''}
+                        value={(formData as any).department || ''}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
@@ -382,7 +448,7 @@ export default function AdminDashboard() {
                       </label>
                       <select
                         name="shift"
-                        value={formData.shift || ''}
+                        value={(formData as any).shift || ''}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
@@ -405,7 +471,7 @@ export default function AdminDashboard() {
                       </label>
                       <select
                         name="specialty"
-                        value={formData.specialty || ''}
+                        value={(formData as any).specialty || ''}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
@@ -428,7 +494,7 @@ export default function AdminDashboard() {
                       </label>
                       <select
                         name="experience"
-                        value={formData.experience || ''}
+                        value={(formData as any).experience || ''}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
