@@ -43,6 +43,7 @@ interface AssignVisitModalProps {
   isOpen: boolean
   onClose: () => void
   patient: Patient | null
+  patients?: Patient[] // Make patients optional for backward compatibility
   onSave: (visit: Visit) => void
 }
 
@@ -63,7 +64,8 @@ const timeSlots = [
   '16:00', '16:15', '16:30', '16:45'
 ]
 
-export default function AssignVisitModal({ isOpen, onClose, patient, onSave }: AssignVisitModalProps) {
+export default function AssignVisitModal({ isOpen, onClose, patient, patients = [], onSave }: AssignVisitModalProps) {
+  const [selectedPatientId, setSelectedPatientId] = useState<string>('')
   const [formData, setFormData] = useState<VisitFormData>({
     doctorId: '',
     doctorName: '',
@@ -78,6 +80,20 @@ export default function AssignVisitModal({ isOpen, onClose, patient, onSave }: A
   })
 
   const [isLoading, setIsLoading] = useState(false)
+
+  // Reset selectedPatientId when modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      if (patient) {
+        setSelectedPatientId(patient.id)
+      } else {
+        setSelectedPatientId('')
+      }
+    }
+  }, [isOpen, patient])
+
+  // Get the currently selected patient
+  const currentPatient = patient || patients.find(p => p.id === selectedPatientId) || null
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -101,7 +117,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, onSave }: A
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!patient) return
+    if (!currentPatient) return
     
     setIsLoading(true)
     
@@ -109,7 +125,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, onSave }: A
       const visit: Visit = {
         ...formData,
         id: `visit_${Date.now()}`,
-        patientId: patient.id
+        patientId: currentPatient.id
       }
       
       await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
@@ -128,6 +144,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, onSave }: A
         notes: '',
         status: 'scheduled'
       })
+      setSelectedPatientId('')
       
       onClose()
     } catch (error) {
@@ -137,7 +154,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, onSave }: A
     }
   }
 
-  if (!isOpen || !patient) return null
+  if (!isOpen) return null
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -153,7 +170,10 @@ export default function AssignVisitModal({ isOpen, onClose, patient, onSave }: A
             <div>
               <h2 className="text-xl font-bold text-gray-900">Assign Visit</h2>
               <p className="text-sm text-gray-600">
-                Schedule appointment for {patient.firstName} {patient.lastName}
+                {currentPatient 
+                  ? `Schedule appointment for ${currentPatient.firstName} ${currentPatient.lastName}`
+                  : 'Schedule a new appointment'
+                }
               </p>
             </div>
           </div>
@@ -165,27 +185,57 @@ export default function AssignVisitModal({ isOpen, onClose, patient, onSave }: A
           </button>
         </div>
 
-        {/* Patient Info */}
-        <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
-          <div className="flex items-center">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold mr-4">
-              {patient.firstName[0]}{patient.lastName[0]}
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">
-                {patient.firstName} {patient.lastName}
-              </h3>
-              <p className="text-sm text-gray-600">{patient.email} • {patient.phone}</p>
-              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                patient.isFirstTime 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-blue-100 text-blue-800'
-              }`}>
-                {patient.isFirstTime ? 'First Time Patient' : 'Returning Patient'}
-              </span>
+        {/* Patient Info/Selection */}
+        {currentPatient ? (
+          <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold mr-4">
+                {currentPatient.firstName[0]}{currentPatient.lastName[0]}
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">
+                  {currentPatient.firstName} {currentPatient.lastName}
+                </h3>
+                <p className="text-sm text-gray-600">{currentPatient.email} • {currentPatient.phone}</p>
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                  currentPatient.isFirstTime 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-blue-100 text-blue-800'
+                }`}>
+                  {currentPatient.isFirstTime ? 'First Time Patient' : 'Returning Patient'}
+                </span>
+              </div>
+              {!patient && (
+                <button
+                  onClick={() => setSelectedPatientId('')}
+                  className="ml-auto text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  Change Patient
+                </button>
+              )}
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
+            <div className="flex items-center mb-4">
+              <FiUser className="h-5 w-5 text-gray-600 mr-2" />
+              <h3 className="font-semibold text-gray-900">Select Patient</h3>
+            </div>
+            <select
+              value={selectedPatientId}
+              onChange={(e) => setSelectedPatientId(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+            >
+              <option value="">Choose a patient</option>
+              {patients.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.firstName} {p.lastName} - {p.email}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
@@ -331,8 +381,8 @@ export default function AssignVisitModal({ isOpen, onClose, patient, onSave }: A
             </button>
             <button
               type="submit"
-              disabled={isLoading}
-              className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50"
+              disabled={isLoading || !currentPatient}
+              className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="flex items-center">

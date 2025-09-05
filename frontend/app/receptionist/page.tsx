@@ -226,7 +226,7 @@ export default function ReceptionistDashboard() {
                   alert('Please add a patient first')
                   return
                 }
-                setSelectedPatient(patients[0])
+                setSelectedPatient(null) // Allow patient selection in modal
                 setIsAssignVisitModalOpen(true)
               }}
               className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center space-x-2"
@@ -285,6 +285,65 @@ export default function ReceptionistDashboard() {
                 <p className="text-2xl font-bold text-gray-900">{todayAppointments}</p>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Patient Management Section */}
+        <div className="mb-8 hover:scale-105 transition-transform duration-300 fade-in stagger-3">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
+            <div className="flex items-center mb-6">
+              <div className="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded-xl mr-3">
+                <FiUsers className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Patient Management</h2>
+                <p className="text-sm text-gray-600">Quick actions for patient scheduling</p>
+              </div>
+            </div>
+
+            {patients.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4">
+                  <FiUsers size={24} />
+                </div>
+                <p className="text-sm font-medium">No patients registered</p>
+                <p className="text-xs text-gray-400 mt-1">Add patients to start scheduling visits</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {patients.map((patient) => (
+                  <div key={patient.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-sm mr-3">
+                          {patient.firstName[0]}{patient.lastName[0]}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 text-sm">
+                            {patient.firstName} {patient.lastName}
+                          </h3>
+                          <p className="text-xs text-gray-600">{patient.email}</p>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
+                            patient.isFirstTime 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {patient.isFirstTime ? 'First Time' : 'Returning'}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleAssignVisitClick(patient)}
+                        className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors text-xs font-medium"
+                        title="Schedule Visit"
+                      >
+                        <FiCalendar size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -465,6 +524,7 @@ export default function ReceptionistDashboard() {
         isOpen={isAssignVisitModalOpen}
         onClose={() => setIsAssignVisitModalOpen(false)}
         patient={selectedPatient}
+        patients={patients} // Pass all patients for selection
         onSave={handleAssignVisit}
       />
     </div>

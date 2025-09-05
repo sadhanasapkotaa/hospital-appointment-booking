@@ -65,6 +65,38 @@ const mockPatients: Patient[] = [
     bloodGroup: 'A+',
     allergies: 'Penicillin',
     chronicConditions: 'Hypertension'
+  },
+  {
+    id: 'patient_2',
+    firstName: 'Maria',
+    lastName: 'Garcia',
+    email: 'maria.garcia@email.com',
+    phone: '+1-555-0125',
+    dateOfBirth: '1978-03-22',
+    gender: 'female',
+    address: '456 Oak Avenue, City, State 12345',
+    emergencyContact: 'Carlos Garcia',
+    emergencyPhone: '+1-555-0126',
+    isFirstTime: true,
+    bloodGroup: 'O-',
+    allergies: 'Shellfish',
+    chronicConditions: 'Diabetes Type 2'
+  },
+  {
+    id: 'patient_3',
+    firstName: 'Robert',
+    lastName: 'Smith',
+    email: 'robert.smith@email.com',
+    phone: '+1-555-0127',
+    dateOfBirth: '1965-11-08',
+    gender: 'male',
+    address: '789 Pine Street, City, State 12345',
+    emergencyContact: 'Linda Smith',
+    emergencyPhone: '+1-555-0128',
+    isFirstTime: false,
+    bloodGroup: 'B+',
+    allergies: 'None',
+    chronicConditions: 'High Cholesterol, Hypertension'
   }
 ]
 
@@ -75,13 +107,55 @@ const mockVisits: Visit[] = [
     doctorId: 'dr1',
     doctorName: 'Dr. Sarah Johnson',
     specialty: 'Cardiology',
-    date: '2025-09-04',
-    time: '10:00',
+    date: '2025-09-05', // Today's date
+    time: '09:00',
     symptoms: 'Chest pain, shortness of breath during exercise',
-    currentDisease: 'Possible cardiac evaluation',
+    currentDisease: 'Cardiac evaluation follow-up',
     urgencyLevel: 'normal',
     status: 'scheduled',
-    notes: 'Patient reports symptoms worsening over past week'
+    notes: 'Patient reports symptoms worsening over past week. Previous ECG showed minor irregularities.'
+  },
+  {
+    id: 'visit_2',
+    patientId: 'patient_2',
+    doctorId: 'dr1',
+    doctorName: 'Dr. Sarah Johnson',
+    specialty: 'Cardiology',
+    date: '2025-09-05', // Today's date
+    time: '10:30',
+    symptoms: 'Fatigue, dizziness, irregular heartbeat',
+    currentDisease: 'First-time cardiac consultation',
+    urgencyLevel: 'high',
+    status: 'scheduled',
+    notes: 'New patient referral from family doctor. Recent episodes of palpitations.'
+  },
+  {
+    id: 'visit_3',
+    patientId: 'patient_3',
+    doctorId: 'dr1',
+    doctorName: 'Dr. Sarah Johnson',
+    specialty: 'Cardiology',
+    date: '2025-09-05', // Today's date
+    time: '14:00',
+    symptoms: 'High blood pressure readings at home',
+    currentDisease: 'Hypertension management',
+    urgencyLevel: 'normal',
+    status: 'scheduled',
+    notes: 'Regular follow-up for blood pressure management. Patient on Lisinopril.'
+  },
+  {
+    id: 'visit_4',
+    patientId: 'patient_1',
+    doctorId: 'dr1',
+    doctorName: 'Dr. Sarah Johnson',
+    specialty: 'Cardiology',
+    date: '2025-09-04', // Yesterday - completed
+    time: '11:00',
+    symptoms: 'Chest pain follow-up',
+    currentDisease: 'Post-stress test evaluation',
+    urgencyLevel: 'normal',
+    status: 'completed',
+    notes: 'Stress test results reviewed. No significant abnormalities found.'
   }
 ]
 
@@ -91,12 +165,59 @@ const mockMedicalHistory: MedicalHistory[] = [
     patientId: 'patient_1',
     visitId: 'visit_old_1',
     date: '2025-08-15',
-    diagnosis: 'Hypertension',
-    prescription: 'Lisinopril 10mg daily, lifestyle modifications',
+    diagnosis: 'Essential Hypertension',
+    prescription: 'Lisinopril 10mg daily, lifestyle modifications (low sodium diet, regular exercise)',
     doctorName: 'Dr. Sarah Johnson',
     followUpRequired: true,
     followUpDate: '2025-09-15',
-    notes: 'Blood pressure well controlled, continue current medication'
+    notes: 'Blood pressure well controlled, continue current medication. Patient compliant with treatment.'
+  },
+  {
+    id: 'history_2',
+    patientId: 'patient_1',
+    visitId: 'visit_old_2',
+    date: '2025-07-20',
+    diagnosis: 'Chest Pain - Non-cardiac',
+    prescription: 'Ibuprofen 400mg as needed, muscle relaxants',
+    doctorName: 'Dr. Sarah Johnson',
+    followUpRequired: false,
+    notes: 'Musculoskeletal chest pain. ECG and stress test normal. Advised on posture improvement.'
+  },
+  {
+    id: 'history_3',
+    patientId: 'patient_3',
+    visitId: 'visit_old_3',
+    date: '2025-08-01',
+    diagnosis: 'Hyperlipidemia, Hypertension',
+    prescription: 'Atorvastatin 20mg daily, Amlodipine 5mg daily',
+    doctorName: 'Dr. Sarah Johnson',
+    followUpRequired: true,
+    followUpDate: '2025-10-01',
+    notes: 'Cholesterol levels improved. Blood pressure under control. Continue current regimen.'
+  },
+  {
+    id: 'history_4',
+    patientId: 'patient_3',
+    visitId: 'visit_old_4',
+    date: '2025-06-15',
+    diagnosis: 'Coronary Artery Disease - Stable',
+    prescription: 'Metoprolol 50mg twice daily, Aspirin 81mg daily, Clopidogrel 75mg daily',
+    doctorName: 'Dr. Sarah Johnson',
+    followUpRequired: true,
+    followUpDate: '2025-09-15',
+    notes: 'Post-angioplasty follow-up. Stent patent. No chest pain. Exercise tolerance improved.'
+  },
+  {
+    id: 'history_5',
+    patientId: 'patient_2',
+    visitId: 'visit_old_5',
+    date: '2025-08-25',
+    diagnosis: 'Type 2 Diabetes - Newly Diagnosed',
+    prescription: 'Metformin 500mg twice daily, dietary counseling',
+    doctorName: 'Dr. Michael Brown',
+    followUpRequired: true,
+    followUpDate: '2025-09-25',
+    notes: 'HbA1c 8.2%. Started on Metformin. Referred to nutritionist. Blood sugar monitoring initiated.'
   }
 ]
 
