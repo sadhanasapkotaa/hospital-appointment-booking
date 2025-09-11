@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from "react";
-import { FiCalendar, FiClock, FiCheckCircle, FiUsers, FiLogOut, FiFilter, FiSearch, FiHeart, FiTrash2, FiPlus, FiUserPlus, FiEdit3 } from "react-icons/fi";
+import { FiCalendar, FiClock, FiCheckCircle, FiUsers, FiLogOut, FiFilter, FiSearch, FiHeart, FiTrash2, FiPlus, FiUserPlus, FiEdit3, FiUserCheck } from "react-icons/fi";
 import AddPatientModal from "../../components/AddPatientModal";
 import AssignVisitModal from "../../components/AssignVisitModal";
 
@@ -33,7 +33,7 @@ interface Visit {
   currentDisease: string
   urgencyLevel: string
   notes?: string
-  status: 'scheduled' | 'completed' | 'cancelled'
+  status: 'scheduled' | 'arrived' | 'in_progress' | 'completed' | 'cancelled'
 }
 
 // Initial mock data
@@ -134,6 +134,18 @@ export default function ReceptionistDashboard() {
     ))
   }
 
+  const handleMarkAsArrived = (visitId: string) => {
+    setVisits(visits.map(v => 
+      v.id === visitId ? { ...v, status: 'arrived' as const } : v
+    ))
+  }
+
+  const handleCancelVisit = (visitId: string) => {
+    setVisits(visits.map(v => 
+      v.id === visitId ? { ...v, status: 'cancelled' as const } : v
+    ))
+  }
+
   // Get visit data with patient information
   const visitsWithPatients = visits.map(visit => {
     const patient = patients.find(p => p.id === visit.patientId)
@@ -163,12 +175,29 @@ export default function ReceptionistDashboard() {
   // Calculate stats
   const totalAppointments = visits.length
   const pendingAppointments = visits.filter(v => v.status === 'scheduled').length
+  const arrivedAppointments = visits.filter(v => v.status === 'arrived').length
   const completedToday = visits.filter(v => 
     v.status === 'completed' && v.date === new Date().toISOString().split('T')[0]
   ).length
   const todayAppointments = visits.filter(v => 
     v.date === new Date().toISOString().split('T')[0]
   ).length
+
+  // Function to get status color classes
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 border-green-200'
+      case 'arrived':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'in_progress':
+        return 'bg-orange-100 text-orange-800 border-orange-200'
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+      default:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -265,24 +294,24 @@ export default function ReceptionistDashboard() {
 
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-3">
             <div className="flex items-center">
+              <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg">
+                <FiUserCheck className="h-6 w-6 text-white" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Arrived Patients</p>
+                <p className="text-2xl font-bold text-gray-900">{arrivedAppointments}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-4">
+            <div className="flex items-center">
               <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg">
                 <FiCheckCircle className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Completed Today</p>
                 <p className="text-2xl font-bold text-gray-900">{completedToday}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-1">
-            <div className="flex items-center">
-              <div className="p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-lg">
-                <FiUsers className="h-6 w-6 text-white" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Today's Appointments</p>
-                <p className="text-2xl font-bold text-gray-900">{todayAppointments}</p>
               </div>
             </div>
           </div>
@@ -467,18 +496,25 @@ export default function ReceptionistDashboard() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                            visit.status === 'completed' ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800' :
-                            visit.status === 'scheduled' ? 'bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-800' :
-                            'bg-gradient-to-r from-red-100 to-red-200 text-red-800'
-                          }`}>
-                            {visit.status}
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(visit.status)}`}>
+                            {visit.status === 'in_progress' ? 'In Progress' : 
+                             visit.status === 'arrived' ? 'Arrived' :
+                             visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{visit.currentDisease}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
                             {visit.status === 'scheduled' && (
+                              <button 
+                                onClick={() => handleMarkAsArrived(visit.id)}
+                                className="p-2 rounded-lg transition-all duration-200 hover:scale-110 bg-blue-100 text-blue-600 hover:bg-blue-200" 
+                                title="Mark as Arrived"
+                              >
+                                <FiUserCheck size={16} />
+                              </button>
+                            )}
+                            {(visit.status === 'scheduled' || visit.status === 'arrived') && (
                               <button 
                                 onClick={() => handleCompleteVisit(visit.id)}
                                 className="p-2 rounded-lg transition-all duration-200 hover:scale-110 bg-green-100 text-green-600 hover:bg-green-200" 
@@ -489,14 +525,14 @@ export default function ReceptionistDashboard() {
                             )}
                             <button 
                               onClick={() => handleAssignVisitClick(visit.patient!)}
-                              className="p-2 rounded-lg transition-all duration-200 hover:scale-110 bg-blue-100 text-blue-600 hover:bg-blue-200" 
+                              className="p-2 rounded-lg transition-all duration-200 hover:scale-110 bg-purple-100 text-purple-600 hover:bg-purple-200" 
                               title="Reschedule"
                             >
-                              <FiClock size={16} />
+                              <FiEdit3 size={16} />
                             </button>
                             <button 
-                              onClick={() => handleDeleteVisit(visit.id)}
-                              className="p-2 rounded-lg transition-all duration-200 hover:scale-110 bg-red-100 text-red-600 hover:bg-red-200" 
+                              onClick={() => handleCancelVisit(visit.id)}
+                              className="p-2 rounded-lg transition-all duration-200 hover:scale-110 bg-gray-100 text-gray-600 hover:bg-gray-200" 
                               title="Cancel"
                             >
                               <FiTrash2 size={16} />

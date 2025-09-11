@@ -25,7 +25,7 @@ interface Visit {
   currentDisease: string
   urgencyLevel: string
   notes?: string
-  status: 'scheduled' | 'completed' | 'cancelled'
+  status: 'scheduled' | 'arrived' | 'in_progress' | 'completed' | 'cancelled'
 }
 
 interface MedicalHistory {

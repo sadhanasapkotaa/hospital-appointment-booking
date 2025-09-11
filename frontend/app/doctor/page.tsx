@@ -1,6 +1,6 @@
 'use client'
-import React, { useState } from "react";
-import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiLogOut, FiActivity, FiHeart, FiEye, FiFileText } from "react-icons/fi";
+import React, { useState, useEffect } from "react";
+import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiLogOut, FiActivity, FiHeart, FiEye, FiFileText, FiPlay, FiPause, FiUserCheck } from "react-icons/fi";
 import PatientDetailsModal from "../../components/PatientDetailsModal";
 
 interface Patient {
@@ -32,7 +32,7 @@ interface Visit {
   currentDisease: string
   urgencyLevel: string
   notes?: string
-  status: 'scheduled' | 'completed' | 'cancelled'
+  status: 'scheduled' | 'arrived' | 'in_progress' | 'completed' | 'cancelled'
 }
 
 interface MedicalHistory {
@@ -107,12 +107,12 @@ const mockVisits: Visit[] = [
     doctorId: 'dr1',
     doctorName: 'Dr. Sarah Johnson',
     specialty: 'Cardiology',
-    date: '2025-09-05', // Today's date
+    date: '2025-09-11', // Today's date
     time: '09:00',
     symptoms: 'Chest pain, shortness of breath during exercise',
     currentDisease: 'Cardiac evaluation follow-up',
     urgencyLevel: 'normal',
-    status: 'scheduled',
+    status: 'arrived',
     notes: 'Patient reports symptoms worsening over past week. Previous ECG showed minor irregularities.'
   },
   {
@@ -121,12 +121,12 @@ const mockVisits: Visit[] = [
     doctorId: 'dr1',
     doctorName: 'Dr. Sarah Johnson',
     specialty: 'Cardiology',
-    date: '2025-09-05', // Today's date
+    date: '2025-09-11', // Today's date
     time: '10:30',
     symptoms: 'Fatigue, dizziness, irregular heartbeat',
     currentDisease: 'First-time cardiac consultation',
     urgencyLevel: 'high',
-    status: 'scheduled',
+    status: 'arrived',
     notes: 'New patient referral from family doctor. Recent episodes of palpitations.'
   },
   {
@@ -135,7 +135,7 @@ const mockVisits: Visit[] = [
     doctorId: 'dr1',
     doctorName: 'Dr. Sarah Johnson',
     specialty: 'Cardiology',
-    date: '2025-09-05', // Today's date
+    date: '2025-09-11', // Today's date
     time: '14:00',
     symptoms: 'High blood pressure readings at home',
     currentDisease: 'Hypertension management',
@@ -149,7 +149,7 @@ const mockVisits: Visit[] = [
     doctorId: 'dr1',
     doctorName: 'Dr. Sarah Johnson',
     specialty: 'Cardiology',
-    date: '2025-09-04', // Yesterday - completed
+    date: '2025-09-10', // Yesterday - completed
     time: '11:00',
     symptoms: 'Chest pain follow-up',
     currentDisease: 'Post-stress test evaluation',
@@ -228,6 +228,9 @@ export default function DoctorDashboard() {
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
+  const [activeTimer, setActiveTimer] = useState<string | null>(null)
+  const [timerSeconds, setTimerSeconds] = useState<{[key: string]: number}>({})
+  const [showTimeAlert, setShowTimeAlert] = useState<string | null>(null)
 
   const handleViewPatient = (patient: Patient, visit: Visit) => {
     setSelectedPatient(patient)
@@ -254,19 +257,96 @@ export default function DoctorDashboard() {
     
     setMedicalHistory([...medicalHistory, newMedicalRecord])
     
-    // Mark visit as completed
+    // Mark visit as completed and stop timer
     setVisits(visits.map(v => 
       v.id === prescriptionData.visitId ? { ...v, status: 'completed' as const } : v
     ))
+    
+    // Stop timer if active
+    if (activeTimer === prescriptionData.visitId) {
+      setActiveTimer(null)
+    }
+  }
+
+  // Timer functions
+  const startTimer = (visitId: string) => {
+    setActiveTimer(visitId)
+    setTimerSeconds(prev => ({ ...prev, [visitId]: prev[visitId] || 0 }))
+    
+    // Mark visit as in progress
+    setVisits(visits.map(v => 
+      v.id === visitId ? { ...v, status: 'in_progress' as const } : v
+    ))
+  }
+
+  const pauseTimer = () => {
+    setActiveTimer(null)
+  }
+
+  const resetTimer = (visitId: string) => {
+    setTimerSeconds(prev => ({ ...prev, [visitId]: 0 }))
+    setActiveTimer(null)
+    setShowTimeAlert(null)
+  }
+
+  // Timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    
+    if (activeTimer) {
+      interval = setInterval(() => {
+        setTimerSeconds(prev => {
+          const newSeconds = (prev[activeTimer] || 0) + 1
+          
+          // Show alert at 15 minutes (900 seconds)
+          if (newSeconds === 900) {
+            setShowTimeAlert(activeTimer)
+            setTimeout(() => setShowTimeAlert(null), 5000) // Hide after 5 seconds
+          }
+          
+          return { ...prev, [activeTimer]: newSeconds }
+        })
+      }, 1000)
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval)
+    }
+  }, [activeTimer])
+
+  // Format timer display
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Function to get status color classes
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 border-green-200'
+      case 'arrived':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'in_progress':
+        return 'bg-orange-100 text-orange-800 border-orange-200'
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+      default:
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+    }
   }
 
   // Calculate stats
   const totalPatients = patients.length
   const todayAppointments = visits.filter(v => 
-    v.date === new Date().toISOString().split('T')[0] && v.status === 'scheduled'
+    v.date === new Date().toISOString().split('T')[0]
+  ).length
+  const arrivedPatients = visits.filter(v => 
+    v.date === new Date().toISOString().split('T')[0] && v.status === 'arrived'
   ).length
   const completedToday = visits.filter(v => 
-    v.date === new Date().toISOString().split('T')[0] && v.status === 'completed'
+    v.status === 'completed' && v.date === new Date().toISOString().split('T')[0]
   ).length
   const pendingVisits = visits.filter(v => v.status === 'scheduled').length
 
@@ -278,6 +358,9 @@ export default function DoctorDashboard() {
       return { ...visit, patient }
     })
     .filter(visit => visit.patient)
+
+  // Get waiting room patients (arrived status)
+  const waitingRoomPatients = todayVisitsWithPatients.filter(v => v.status === 'arrived')
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -347,7 +430,19 @@ export default function DoctorDashboard() {
 
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-3">
             <div className="flex items-center">
-              <div className="p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-lg">
+              <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg">
+                <FiUserCheck className="h-6 w-6 text-white" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Waiting Room</p>
+                <p className="text-2xl font-bold text-gray-900">{arrivedPatients}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-4">
+            <div className="flex items-center">
+              <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg">
                 <FiCheckCircle className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
@@ -356,19 +451,108 @@ export default function DoctorDashboard() {
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-1">
+        {/* Time Alert */}
+        {showTimeAlert && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg text-red-800 fade-in">
             <div className="flex items-center">
-              <div className="p-3 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl shadow-lg">
-                <FiClock className="h-6 w-6 text-white" />
+              <FiClock className="mr-2" />
+              <span className="font-medium">15 minutes completed for current consultation!</span>
+            </div>
+          </div>
+        )}
+
+        {/* Waiting Room */}
+        {waitingRoomPatients.length > 0 && (
+          <div className="mb-8 hover:scale-105 transition-transform duration-300 fade-in stagger-1">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
+              <div className="flex items-center mb-6">
+                <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl mr-3">
+                  <FiUserCheck className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Waiting Room</h2>
+                  <p className="text-sm text-gray-600">Patients who have arrived and are waiting</p>
+                </div>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending</p>
-                <p className="text-2xl font-bold text-gray-900">{pendingVisits}</p>
+              
+              <div className="overflow-x-auto rounded-xl">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient ID</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient Name</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Appointment Time</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Timer</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {waitingRoomPatients.map((visit) => (
+                      <tr key={visit.id} className="bg-white/50 backdrop-blur-sm hover:bg-white/70 transition-all duration-200">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{visit.patient!.id}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-xs mr-3">
+                              {visit.patient!.firstName[0]}{visit.patient!.lastName[0]}
+                            </div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {visit.patient!.firstName} {visit.patient!.lastName}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">{visit.time}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-sm font-mono ${
+                              activeTimer === visit.id ? 'text-orange-600 font-bold' : 'text-gray-600'
+                            }`}>
+                              {formatTime(timerSeconds[visit.id] || 0)}
+                            </span>
+                            {activeTimer === visit.id ? (
+                              <button
+                                onClick={pauseTimer}
+                                className="p-1 rounded bg-orange-100 text-orange-600 hover:bg-orange-200"
+                                title="Pause Timer"
+                              >
+                                <FiPause size={14} />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => startTimer(visit.id)}
+                                className="p-1 rounded bg-green-100 text-green-600 hover:bg-green-200"
+                                title="Start Timer"
+                              >
+                                <FiPlay size={14} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => resetTimer(visit.id)}
+                              className="p-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200"
+                              title="Reset Timer"
+                            >
+                              <FiClock size={14} />
+                            </button>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => handleViewPatient(visit.patient!, visit)}
+                            className="p-2 rounded-lg transition-all duration-200 hover:scale-110 bg-blue-100 text-blue-600 hover:bg-blue-200"
+                            title="View Patient"
+                          >
+                            <FiEye size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -408,10 +592,15 @@ export default function DoctorDashboard() {
                             </h3>
                             <p className="text-sm text-gray-600">{visit.time} • {visit.currentDisease}</p>
                             <div className="flex items-center mt-1">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(visit.status)}`}>
+                                {visit.status === 'in_progress' ? 'In Progress' : 
+                                 visit.status === 'arrived' ? 'Arrived' :
+                                 visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
+                              </span>
+                              <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                 visit.patient!.isFirstTime 
                                   ? 'bg-green-100 text-green-800' 
-                                  : 'bg-blue-100 text-blue-800'
+                                  : 'bg-purple-100 text-purple-800'
                               }`}>
                                 {visit.patient!.isFirstTime ? 'First Time' : 'Returning'}
                               </span>
@@ -425,21 +614,50 @@ export default function DoctorDashboard() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleViewPatient(visit.patient!, visit)}
-                            className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                            title="View Patient Details"
-                          >
-                            <FiEye size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleViewPatient(visit.patient!, visit)}
-                            className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
-                            title="Add Prescription"
-                          >
-                            <FiFileText size={16} />
-                          </button>
+                        <div className="flex items-center space-x-3">
+                          {/* Timer Controls for arrived patients */}
+                          {visit.status === 'arrived' && (
+                            <div className="flex items-center space-x-2 mr-2">
+                              <span className={`text-sm font-mono ${
+                                activeTimer === visit.id ? 'text-orange-600 font-bold' : 'text-gray-600'
+                              }`}>
+                                {formatTime(timerSeconds[visit.id] || 0)}
+                              </span>
+                              {activeTimer === visit.id ? (
+                                <button
+                                  onClick={pauseTimer}
+                                  className="p-1 rounded bg-orange-100 text-orange-600 hover:bg-orange-200"
+                                  title="Pause Timer"
+                                >
+                                  <FiPause size={14} />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => startTimer(visit.id)}
+                                  className="p-1 rounded bg-green-100 text-green-600 hover:bg-green-200"
+                                  title="Start Timer"
+                                >
+                                  <FiPlay size={14} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleViewPatient(visit.patient!, visit)}
+                              className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                              title="View Patient Details"
+                            >
+                              <FiEye size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleViewPatient(visit.patient!, visit)}
+                              className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                              title="Add Prescription"
+                            >
+                              <FiFileText size={16} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                       <div className="mt-3 pt-3 border-t border-blue-200">
