@@ -131,9 +131,22 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://friendly-space-trout-xq5jrxgp446hprw-3000.app.github.dev",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # For development only
+CORS_ALLOWED_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -148,6 +161,12 @@ REST_FRAMEWORK = {
 
 # Allow all hosts for development
 ALLOWED_HOSTS = ['*']
+
+# CSRF settings for API
+CSRF_TRUSTED_ORIGINS = [
+    "https://friendly-space-trout-xq5jrxgp446hprw-3000.app.github.dev",
+    "https://friendly-space-trout-xq5jrxgp446hprw-8000.app.github.dev",
+]
 
 # Custom user model
 AUTH_USER_MODEL = 'user.CustomUser'
