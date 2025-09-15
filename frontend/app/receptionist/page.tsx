@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { FiCalendar, FiClock, FiCheckCircle, FiUsers, FiLogOut, FiFilter, FiSearch, FiHeart, FiTrash2, FiPlus, FiUserPlus, FiEdit3, FiUserCheck } from "react-icons/fi";
 import AddPatientModal from "../../components/AddPatientModal";
-import AssignVisitModal from "../../components/AssignVisitModal";
+import ScheduleVisit from "../../components/ScheduleVisit";
 import { authHelpers, apiClient } from '../api/api';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
@@ -106,16 +106,18 @@ const initialVisits: Visit[] = [
 
 export default function ReceptionistDashboard() {
   const router = useRouter()
-  const [patients, setPatients] = useState<Patient[]>(initialPatients)
-  const [visits, setVisits] = useState<Visit[]>(initialVisits)
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [visits, setVisits] = useState<Visit[]>([])
   const [isAddPatientModalOpen, setIsAddPatientModalOpen] = useState(false)
-  const [isAssignVisitModalOpen, setIsAssignVisitModalOpen] = useState(false)
+  const [isScheduleVisitModalOpen, setIsScheduleVisitModalOpen] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('all')
   const [isLoading, setIsLoading] = useState(true)
+  const [isAppointmentsLoading, setIsAppointmentsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [appointmentsError, setAppointmentsError] = useState('')
 
   // Logout handler
   const handleLogout = async () => {
@@ -131,25 +133,59 @@ export default function ReceptionistDashboard() {
     }
   }
 
-  // Fetch patients from backend
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        setIsLoading(true)
-        const response = await apiClient.getPatients()
-        setPatients(response.patients || [])
-        setError('')
-      } catch (err: any) {
-        console.error('Error fetching patients:', err)
-        setError('Failed to load patients')
-        // Fallback to initial mock data if API fails
-        setPatients(initialPatients)
-      } finally {
-        setIsLoading(false)
-      }
+  // Fetch data from backend
+  const fetchData = async () => {
+    // Fetch patients
+    try {
+      setIsLoading(true)
+      const response = await apiClient.getPatients()
+      setPatients(response.patients || [])
+      setError('')
+    } catch (err: any) {
+      console.error('Error fetching patients:', err)
+      setError('Failed to load patients')
+      // Fallback to initial mock data if API fails
+      setPatients(initialPatients)
+    } finally {
+      setIsLoading(false)
     }
 
-    fetchPatients()
+    // Fetch appointments
+    try {
+      setIsAppointmentsLoading(true)
+      const appointmentsResponse = await apiClient.getAppointments()
+      
+      // Convert backend appointment format to frontend visit format
+      const appointmentsData = Array.isArray(appointmentsResponse) ? appointmentsResponse : appointmentsResponse.appointments || []
+      const visitsData = appointmentsData.map((appointment: any) => ({
+        id: appointment.id.toString(),
+        patientId: appointment.patient.toString(),
+        doctorId: appointment.doctor.toString(),
+        doctorName: appointment.doctor_name || 'Dr. Unknown',
+        specialty: appointment.specialty || 'General',
+        date: appointment.appointment_date,
+        time: appointment.appointment_time,
+        symptoms: appointment.symptoms || appointment.reason || '',
+        currentDisease: appointment.reason || '',
+        urgencyLevel: appointment.priority || 'normal',
+        notes: appointment.notes || '',
+        status: appointment.status || 'scheduled'
+      }))
+      
+      setVisits(visitsData)
+      setAppointmentsError('')
+    } catch (err: any) {
+      console.error('Error fetching appointments:', err)
+      setAppointmentsError('Failed to load appointments')
+      // Fallback to initial mock data if API fails
+      setVisits(initialVisits)
+    } finally {
+      setIsAppointmentsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
   }, [])
 
   const handleAddPatient = (newPatient: Patient) => {
@@ -162,7 +198,7 @@ export default function ReceptionistDashboard() {
 
   const handleAssignVisitClick = (patient: Patient) => {
     setSelectedPatient(patient)
-    setIsAssignVisitModalOpen(true)
+    setIsScheduleVisitModalOpen(true)
   }
 
   const handleDeleteVisit = (visitId: string) => {
@@ -300,7 +336,7 @@ export default function ReceptionistDashboard() {
                   return
                 }
                 setSelectedPatient(null) // Allow patient selection in modal
-                setIsAssignVisitModalOpen(true)
+                setIsScheduleVisitModalOpen(true)
               }}
               className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center space-x-2"
             >
@@ -611,14 +647,15 @@ export default function ReceptionistDashboard() {
         isOpen={isAddPatientModalOpen}
         onClose={() => setIsAddPatientModalOpen(false)}
         onSave={handleAddPatient}
+        onSuccess={fetchData} // Refresh data after successful patient creation
       />
 
-      <AssignVisitModal
-        isOpen={isAssignVisitModalOpen}
-        onClose={() => setIsAssignVisitModalOpen(false)}
+      <ScheduleVisit
+        isOpen={isScheduleVisitModalOpen}
+        onClose={() => setIsScheduleVisitModalOpen(false)}
         patient={selectedPatient}
         patients={patients} // Pass all patients for selection
-        onSave={handleAssignVisit}
+        onSuccess={fetchData} // Refresh data after successful appointment creation
       />
     </div>
   );

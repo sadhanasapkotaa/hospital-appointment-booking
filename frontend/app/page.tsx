@@ -435,7 +435,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-gray-700 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 mb-4 md:mb-0">© 2025 HealthPal Hospital. All rights reserved.</p>
+            <p className="text-gray-400 mb-4 md:mb-0">© 2025 HealthPal Hospital. All rights reserved. Version - 2.0.2</p>
             <div className="flex space-x-6 text-gray-400">
               <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-white transition-colors">Terms of Service</a>

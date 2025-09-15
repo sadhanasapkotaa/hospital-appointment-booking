@@ -40,9 +40,10 @@ interface AddPatientModalProps {
   isOpen: boolean
   onClose: () => void
   onSave: (patient: Patient) => void
+  onSuccess?: () => void
 }
 
-export default function AddPatientModal({ isOpen, onClose, onSave }: AddPatientModalProps) {
+export default function AddPatientModal({ isOpen, onClose, onSave, onSuccess }: AddPatientModalProps) {
   const [formData, setFormData] = useState<PatientFormData>({
     firstName: '',
     lastName: '',
@@ -96,6 +97,11 @@ export default function AddPatientModal({ isOpen, onClose, onSave }: AddPatientM
       }
       
       onSave(newPatient)
+      
+      // Call onSuccess callback to refresh data
+      if (onSuccess) {
+        onSuccess()
+      }
       
       // Reset form
       setFormData({

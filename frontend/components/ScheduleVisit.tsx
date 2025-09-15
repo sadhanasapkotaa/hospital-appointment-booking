@@ -25,8 +25,15 @@ interface Doctor {
   is_available: boolean
 }
 
-interface Visit {
-  id: string
+interface ScheduleVisitProps {
+  isOpen: boolean
+  onClose: () => void
+  patient?: Patient | null
+  patients?: Patient[]
+  onSuccess?: () => void
+}
+
+interface VisitFormData {
   patientId: string
   doctorId: string
   doctorName: string
@@ -35,34 +42,9 @@ interface Visit {
   time: string
   symptoms: string
   currentDisease: string
-  urgencyLevel: string
-  notes?: string
-  status: 'scheduled' | 'completed' | 'cancelled'
+  urgencyLevel: 'low' | 'normal' | 'high' | 'urgent'
+  notes: string
 }
-
-interface VisitFormData {
-  doctorId: string
-  doctorName: string
-  specialty: string
-  date: string
-  time: string
-  symptoms: string
-  currentDisease: string
-  urgencyLevel: string
-  notes?: string
-  status: 'scheduled' | 'completed' | 'cancelled'
-}
-
-interface AssignVisitModalProps {
-  isOpen: boolean
-  onClose: () => void
-  patient: Patient | null
-  patients?: Patient[] // Make patients optional for backward compatibility
-  onSave: (visit: Visit) => void
-  onSuccess?: () => void // Callback to refresh data after successful submission
-}
-
-
 
 const timeSlots = [
   '09:00', '09:15', '09:30', '09:45',
@@ -73,11 +55,9 @@ const timeSlots = [
   '16:00', '16:15', '16:30', '16:45'
 ]
 
-export default function AssignVisitModal({ isOpen, onClose, patient, patients = [], onSave, onSuccess }: AssignVisitModalProps) {
-  const [selectedPatientId, setSelectedPatientId] = useState<string>('')
-  const [doctors, setDoctors] = useState<Doctor[]>([])
-  const [doctorsLoading, setDoctorsLoading] = useState(false)
+export default function ScheduleVisit({ isOpen, onClose, patient, patients = [], onSuccess }: ScheduleVisitProps) {
   const [formData, setFormData] = useState<VisitFormData>({
+    patientId: '',
     doctorId: '',
     doctorName: '',
     specialty: '',
@@ -86,30 +66,29 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
     symptoms: '',
     currentDisease: '',
     urgencyLevel: 'normal',
-    notes: '',
-    status: 'scheduled'
+    notes: ''
   })
-
+  
+  const [selectedPatientId, setSelectedPatientId] = useState('')
+  const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [doctorsLoading, setDoctorsLoading] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Reset selectedPatientId when modal opens
+  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       if (patient) {
         setSelectedPatientId(patient.id)
+        setFormData(prev => ({ ...prev, patientId: patient.id }))
       } else {
         setSelectedPatientId('')
+        setFormData(prev => ({ ...prev, patientId: '' }))
       }
+      fetchDoctors()
     }
   }, [isOpen, patient])
 
   // Fetch doctors when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchDoctors()
-    }
-  }, [isOpen])
-
   const fetchDoctors = async () => {
     try {
       setDoctorsLoading(true)
@@ -142,6 +121,18 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
           experience_years: 8,
           consultation_fee: '120.00',
           is_available: true
+        },
+        {
+          id: '3',
+          name: 'Dr. Michael Davis',
+          firstName: 'Michael',
+          lastName: 'Davis',
+          email: 'michael.davis@hospital.com',
+          specialization: 'Orthopedics',
+          license_number: 'MD003',
+          experience_years: 12,
+          consultation_fee: '180.00',
+          is_available: true
         }
       ]
       setDoctors(mockDoctors)
@@ -153,14 +144,6 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
   // Get the currently selected patient
   const currentPatient = patient || patients.find(p => p.id === selectedPatientId) || null
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-  }
-
   // Form validation - check if all required fields are filled
   const isFormValid = () => {
     const valid = (
@@ -171,17 +154,24 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
       formData.symptoms.trim() // Symptoms must be provided
     )
     
-    // Debug logging
-    console.log('Form validation:', {
-      currentPatient: !!currentPatient,
-      doctorId: !!formData.doctorId,
-      date: !!formData.date,
-      time: !!formData.time,
-      symptoms: !!formData.symptoms.trim(),
-      overall: valid
-    })
-    
     return valid
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handlePatientSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const patientId = e.target.value
+    setSelectedPatientId(patientId)
+    setFormData(prev => ({
+      ...prev,
+      patientId
+    }))
   }
 
   const handleDoctorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -198,7 +188,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!currentPatient) return
+    if (!currentPatient || !isFormValid()) return
     
     setIsLoading(true)
     
@@ -210,32 +200,18 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
         appointment_date: formData.date,
         appointment_time: formData.time,
         symptoms: formData.symptoms,
-        reason: formData.currentDisease,
+        reason: formData.currentDisease || formData.symptoms,
         priority: formData.urgencyLevel,
         notes: formData.notes || '',
         is_first_visit: currentPatient.isFirstTime
       }
 
+      console.log('Submitting appointment:', appointmentData)
+
       // Call backend API to create appointment
       const response = await apiClient.createAppointmentByStaff(appointmentData)
       
-      // Create visit object for frontend state
-      const visit: Visit = {
-        id: response.appointment.id.toString(),
-        patientId: currentPatient.id,
-        doctorId: formData.doctorId,
-        doctorName: formData.doctorName,
-        specialty: formData.specialty,
-        date: formData.date,
-        time: formData.time,
-        symptoms: formData.symptoms,
-        currentDisease: formData.currentDisease,
-        urgencyLevel: formData.urgencyLevel,
-        notes: formData.notes || '',
-        status: 'scheduled'
-      }
-      
-      onSave(visit)
+      console.log('Appointment created:', response)
       
       // Call onSuccess callback to refresh data
       if (onSuccess) {
@@ -244,6 +220,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
       
       // Reset form
       setFormData({
+        patientId: '',
         doctorId: '',
         doctorName: '',
         specialty: '',
@@ -252,8 +229,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
         symptoms: '',
         currentDisease: '',
         urgencyLevel: 'normal',
-        notes: '',
-        status: 'scheduled'
+        notes: ''
       })
       setSelectedPatientId('')
       
@@ -275,59 +251,36 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
   const today = new Date().toISOString().split('T')[0]
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center">
-            <div className="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded-xl mr-3">
-              <FiCalendar className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Assign Visit</h2>
-              <p className="text-sm text-gray-600">
-                {currentPatient 
-                  ? `Schedule appointment for ${currentPatient.firstName} ${currentPatient.lastName}`
-                  : 'Schedule a new appointment'
-                }
-              </p>
-            </div>
-          </div>
+          <h2 className="text-2xl font-bold text-gray-900">Schedule Visit</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
-            <FiX className="h-5 w-5 text-gray-500" />
+            <FiX className="h-6 w-6 text-gray-500" />
           </button>
         </div>
 
-        {/* Patient Info/Selection */}
-        {currentPatient ? (
+        {/* Patient Info */}
+        {patient ? (
           <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold mr-4">
-                {currentPatient.firstName[0]}{currentPatient.lastName[0]}
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">
-                  {currentPatient.firstName} {currentPatient.lastName}
-                </h3>
-                <p className="text-sm text-gray-600">{currentPatient.email} • {currentPatient.phone}</p>
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                  currentPatient.isFirstTime 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-blue-100 text-blue-800'
-                }`}>
-                  {currentPatient.isFirstTime ? 'First Time Patient' : 'Returning Patient'}
+            <div className="flex items-center mb-4">
+              <FiUser className="h-5 w-5 text-blue-600 mr-2" />
+              <h3 className="font-semibold text-gray-900">Patient Information</h3>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm">
+              <p className="text-lg font-medium text-gray-900">
+                {patient.firstName} {patient.lastName}
+              </p>
+              <p className="text-sm text-gray-600">{patient.email}</p>
+              <p className="text-sm text-gray-600">{patient.phone}</p>
+              {patient.isFirstTime && (
+                <span className="inline-block mt-2 px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                  First Time Visit
                 </span>
-              </div>
-              {!patient && (
-                <button
-                  onClick={() => setSelectedPatientId('')}
-                  className="ml-auto text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  Change Patient
-                </button>
               )}
             </div>
           </div>
@@ -339,7 +292,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
             </div>
             <select
               value={selectedPatientId}
-              onChange={(e) => setSelectedPatientId(e.target.value)}
+              onChange={handlePatientSelect}
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             >
@@ -358,7 +311,9 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
           <div className="space-y-6">
             {/* Doctor Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Doctor *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Doctor *
+              </label>
               <select
                 name="doctorId"
                 value={formData.doctorId}
@@ -376,17 +331,15 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
                   </option>
                 ))}
               </select>
-              {doctors.length === 0 && !doctorsLoading && (
-                <p className="mt-2 text-sm text-red-600">
-                  No doctors available. Please contact administration.
-                </p>
-              )}
             </div>
 
             {/* Date and Time */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <FiCalendar className="inline h-4 w-4 mr-1" />
+                  Appointment Date *
+                </label>
                 <input
                   type="date"
                   name="date"
@@ -397,9 +350,11 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Time Slot (15 min) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <FiClock className="inline h-4 w-4 mr-1" />
+                  Appointment Time *
+                </label>
                 <select
                   name="time"
                   value={formData.time}
@@ -419,79 +374,67 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
 
             {/* Symptoms */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Current Symptoms *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Primary Symptoms *
+              </label>
               <textarea
                 name="symptoms"
                 value={formData.symptoms}
                 onChange={handleInputChange}
                 required
                 rows={3}
+                placeholder="Describe the main symptoms or concerns..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                placeholder="Describe the patient's current symptoms..."
               />
             </div>
 
-            {/* Current Disease/Condition */}
+            {/* Suspected Disease/Condition */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Suspected Disease/Condition *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Suspected Disease/Condition
+              </label>
               <input
                 type="text"
                 name="currentDisease"
                 value={formData.currentDisease}
                 onChange={handleInputChange}
-                required
+                placeholder="e.g., Headache, Follow-up visit, etc."
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter suspected condition or reason for visit"
               />
             </div>
 
             {/* Urgency Level */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Urgency Level *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Urgency Level *
+              </label>
               <select
                 name="urgencyLevel"
                 value={formData.urgencyLevel}
                 onChange={handleInputChange}
-                required
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="low">Low - Routine checkup</option>
+                <option value="low">Low - Routine appointment</option>
                 <option value="normal">Normal - Standard appointment</option>
-                <option value="high">High - Urgent care needed</option>
-                <option value="critical">Critical - Emergency</option>
+                <option value="high">High - Priority appointment</option>
+                <option value="urgent">Urgent - Immediate attention needed</option>
               </select>
             </div>
 
             {/* Additional Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Additional Notes</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Additional Notes
+              </label>
               <textarea
                 name="notes"
                 value={formData.notes}
                 onChange={handleInputChange}
-                rows={2}
+                rows={3}
+                placeholder="Any additional information, medical history, or special requirements..."
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                placeholder="Any additional information for the doctor (optional)"
               />
             </div>
-
-            {/* Urgency Alert */}
-            {formData.urgencyLevel === 'high' || formData.urgencyLevel === 'critical' ? (
-              <div className="flex items-center p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
-                <FiAlertCircle className="h-5 w-5 text-yellow-600 mr-3" />
-                <div>
-                  <p className="text-sm font-medium text-yellow-800">
-                    {formData.urgencyLevel === 'critical' ? 'Critical Case' : 'High Priority Case'}
-                  </p>
-                  <p className="text-xs text-yellow-700">
-                    {formData.urgencyLevel === 'critical' 
-                      ? 'This case requires immediate attention. Consider emergency protocols.'
-                      : 'This case should be prioritized and scheduled as soon as possible.'
-                    }
-                  </p>
-                </div>
-              </div>
-            ) : null}
           </div>
 
           {/* Submit Buttons */}

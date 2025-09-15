@@ -195,7 +195,7 @@ class APIClient {
   }
 
   // Appointment Methods
-  async getAppointments(): Promise<Appointment[]> {
+  async getAppointments(): Promise<any> {
     return await this.makeRequest('bookings/appointments/');
   }
 
@@ -243,9 +243,27 @@ class APIClient {
     appointment_time: string;
     symptoms: string;
     priority: string;
+    reason: string;
     notes?: string;
-  }): Promise<Appointment> {
+  }): Promise<any> {
     return await this.makeRequest('bookings/appointments/create/', {
+      method: 'POST',
+      body: JSON.stringify(appointmentData),
+    });
+  }
+
+  async createAppointmentByStaff(appointmentData: {
+    patient_id: string;
+    doctor_id: string;
+    appointment_date: string;
+    appointment_time: string;
+    symptoms: string;
+    reason: string;
+    priority: string;
+    notes?: string;
+    is_first_visit?: boolean;
+  }): Promise<any> {
+    return await this.makeRequest('bookings/appointments/create-by-staff/', {
       method: 'POST',
       body: JSON.stringify(appointmentData),
     });
