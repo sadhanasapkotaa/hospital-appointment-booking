@@ -1,7 +1,10 @@
 'use client'
-import React, { useState, useEffect } from "react";
-import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiLogOut, FiActivity, FiHeart, FiEye, FiFileText, FiPlay, FiPause, FiUserCheck } from "react-icons/fi";
-import PatientDetailsModal from "../../components/PatientDetailsModal";
+import React, { useState, useEffect } from 'react'
+import { FaUser, FaClock, FaCalendarCheck, FaStethoscope, FaPlay, FaPause, FaStop } from 'react-icons/fa'
+import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiLogOut, FiActivity, FiHeart, FiEye, FiFileText, FiPlay, FiPause, FiUserCheck } from "react-icons/fi"
+import PatientDetailsModal from '@/components/PatientDetailsModal'
+import { apiClient, authHelpers } from '../api/api'
+import { useRouter } from 'next/navigation'
 
 interface Patient {
   id: string
@@ -222,9 +225,18 @@ const mockMedicalHistory: MedicalHistory[] = [
 ]
 
 export default function DoctorDashboard() {
-  const [patients] = useState<Patient[]>(mockPatients)
-  const [visits, setVisits] = useState<Visit[]>(mockVisits)
-  const [medicalHistory, setMedicalHistory] = useState<MedicalHistory[]>(mockMedicalHistory)
+  const router = useRouter()
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [visits, setVisits] = useState<Visit[]>([])
+  const [medicalHistory, setMedicalHistory] = useState<MedicalHistory[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [stats, setStats] = useState({
+    totalPatients: 0,
+    todayAppointments: 0,
+    arrivedPatients: 0,
+    completedToday: 0
+  })
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false)
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
@@ -232,10 +244,68 @@ export default function DoctorDashboard() {
   const [timerSeconds, setTimerSeconds] = useState<{[key: string]: number}>({})
   const [showTimeAlert, setShowTimeAlert] = useState<string | null>(null)
 
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await authHelpers.logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Force logout even if API call fails
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token')
+        router.push('/login')
+      }
+    }
+  }
+
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        const data = await apiClient.getDoctorDashboard()
+        
+        setPatients(data.patients || [])
+        setVisits(data.visits || [])
+        setMedicalHistory(data.medicalHistory || [])
+        setStats(data.stats || {
+          totalPatients: 0,
+          todayAppointments: 0,
+          arrivedPatients: 0,
+          completedToday: 0
+        })
+        
+        setError('')
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
+
   const handleViewPatient = (patient: Patient, visit: Visit) => {
     setSelectedPatient(patient)
     setSelectedVisit(visit)
     setIsPatientModalOpen(true)
+  }
+
+  // Update appointment status
+  const updateAppointmentStatus = async (visitId: string, newStatus: string, notes?: string) => {
+    try {
+      await apiClient.updateAppointmentStatus(parseInt(visitId), newStatus, notes)
+      
+      // Update local state
+      setVisits(visits.map(visit => 
+        visit.id === visitId ? { ...visit, status: newStatus as any, notes: notes || visit.notes } : visit
+      ))
+    } catch (error) {
+      console.error('Error updating appointment status:', error)
+      setError('Failed to update appointment status')
+    }
   }
 
   const handleSavePrescription = (prescriptionData: any) => {
@@ -337,16 +407,16 @@ export default function DoctorDashboard() {
     }
   }
 
-  // Calculate stats
-  const totalPatients = patients.length
-  const todayAppointments = visits.filter(v => 
+  // Use stats from backend or calculate from local data if needed
+  const totalPatients = stats.totalPatients || patients.length
+  const todayAppointments = stats.todayAppointments || visits.filter(v => 
     v.date === new Date().toISOString().split('T')[0]
   ).length
-  const arrivedPatients = visits.filter(v => 
+  const arrivedPatients = stats.arrivedPatients || visits.filter(v => 
     v.date === new Date().toISOString().split('T')[0] && v.status === 'arrived'
   ).length
-  const completedToday = visits.filter(v => 
-    v.status === 'completed' && v.date === new Date().toISOString().split('T')[0]
+  const completedToday = stats.completedToday || visits.filter(v => 
+    v.date === new Date().toISOString().split('T')[0] && v.status === 'completed'
   ).length
   const pendingVisits = visits.filter(v => v.status === 'scheduled').length
 
@@ -383,7 +453,10 @@ export default function DoctorDashboard() {
               <div className="flex items-center bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2 rounded-xl">
                 <span className="text-sm font-medium text-blue-700">Dr. Sarah Johnson (Cardiology)</span>
               </div>
-              <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center space-x-2">
+              <button 
+                onClick={handleLogout}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center space-x-2"
+              >
                 <FiLogOut size={16} />
                 <span>Logout</span>
               </button>
@@ -394,7 +467,32 @@ export default function DoctorDashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+            <span className="ml-4 text-lg text-gray-600">Loading dashboard...</span>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            <div className="flex">
+              <svg className="w-5 h-5 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="font-medium">Error loading dashboard</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <>
+            {/* Welcome Section */}
         <div className="mb-8 fade-in">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
             Welcome, Dr. Sarah Johnson
@@ -712,6 +810,8 @@ export default function DoctorDashboard() {
             </div>
           </div>
         </div>
+          </>
+        )}
       </main>
 
       {/* Patient Details Modal */}

@@ -23,7 +23,7 @@ class DoctorSchedule(models.Model):
         ('saturday', 'Saturday'),
         ('sunday', 'Sunday'),
     ]
-    
+
     doctor = models.ForeignKey(Doctor, on_delete=models.CASCADE, related_name='schedules')
     day_of_week = models.CharField(max_length=10, choices=DAYS_OF_WEEK)
     start_time = models.TimeField()

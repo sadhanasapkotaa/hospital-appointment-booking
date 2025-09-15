@@ -3,6 +3,9 @@ import React, { useState } from "react";
 import { FiCalendar, FiClock, FiCheckCircle, FiUsers, FiLogOut, FiFilter, FiSearch, FiHeart, FiTrash2, FiPlus, FiUserPlus, FiEdit3, FiUserCheck } from "react-icons/fi";
 import AddPatientModal from "../../components/AddPatientModal";
 import AssignVisitModal from "../../components/AssignVisitModal";
+import { authHelpers, apiClient } from '../api/api';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 interface Patient {
   id: string
@@ -102,6 +105,7 @@ const initialVisits: Visit[] = [
 ]
 
 export default function ReceptionistDashboard() {
+  const router = useRouter()
   const [patients, setPatients] = useState<Patient[]>(initialPatients)
   const [visits, setVisits] = useState<Visit[]>(initialVisits)
   const [isAddPatientModalOpen, setIsAddPatientModalOpen] = useState(false)
@@ -110,6 +114,43 @@ export default function ReceptionistDashboard() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('all')
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await authHelpers.logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Force logout even if API call fails
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token')
+        router.push('/login')
+      }
+    }
+  }
+
+  // Fetch patients from backend
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        setIsLoading(true)
+        const response = await apiClient.getPatients()
+        setPatients(response.patients || [])
+        setError('')
+      } catch (err: any) {
+        console.error('Error fetching patients:', err)
+        setError('Failed to load patients')
+        // Fallback to initial mock data if API fails
+        setPatients(initialPatients)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchPatients()
+  }, [])
 
   const handleAddPatient = (newPatient: Patient) => {
     setPatients([...patients, newPatient])
@@ -220,7 +261,10 @@ export default function ReceptionistDashboard() {
               <div className="flex items-center bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2 rounded-xl">
                 <span className="text-sm font-medium text-blue-700">Mary Wilson (Receptionist)</span>
               </div>
-              <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center space-x-2">
+              <button 
+                onClick={handleLogout}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center space-x-2"
+              >
                 <FiLogOut size={16} />
                 <span>Logout</span>
               </button>
@@ -330,7 +374,20 @@ export default function ReceptionistDashboard() {
               </div>
             </div>
 
-            {patients.length === 0 ? (
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-4"></div>
+                <p className="text-sm text-gray-600">Loading patients...</p>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-12 text-red-500">
+                <div className="w-16 h-16 bg-gradient-to-r from-red-100 to-red-200 rounded-full flex items-center justify-center mb-4">
+                  <FiUsers size={24} />
+                </div>
+                <p className="text-sm font-medium">{error}</p>
+                <p className="text-xs text-red-400 mt-1">Please try again later</p>
+              </div>
+            ) : patients.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                 <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4">
                   <FiUsers size={24} />

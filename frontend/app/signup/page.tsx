@@ -2,10 +2,15 @@
 import React, { useState } from 'react';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiHeart, FiArrowLeft, FiUser, FiPhone } from 'react-icons/fi';
 import Link from 'next/link';
+import { authHelpers } from '../api/api';
+import { useRouter } from 'next/navigation';
 
 export default function SignUpPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -13,8 +18,17 @@ export default function SignUpPage() {
     phone: '',
     password: '',
     confirmPassword: '',
-    role: 'Patient',
-    termsAccepted: false
+    role: 'doctor',
+    termsAccepted: false,
+    // Doctor fields
+    specialization: '',
+    licenseNumber: '',
+    experienceYears: 0,
+    consultationFee: 0,
+    // Staff fields
+    employeeId: '',
+    department: '',
+    position: ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -26,10 +40,76 @@ export default function SignUpPage() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle sign up logic here
-    console.log('Sign up attempt:', formData);
+    setIsLoading(true);
+    setError('');
+
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.termsAccepted) {
+      setError('Please accept the terms and conditions');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const registrationData: any = {
+        username: formData.email, // Using email as username
+        email: formData.email,
+        password: formData.password,
+        confirm_password: formData.confirmPassword,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        user_type: formData.role as 'patient' | 'doctor' | 'staff',
+        phone: formData.phone,
+      };
+
+      // Add role-specific fields
+      if (formData.role === 'doctor') {
+        registrationData.specialization = formData.specialization;
+        registrationData.license_number = formData.licenseNumber;
+        registrationData.experience_years = formData.experienceYears;
+        registrationData.consultation_fee = formData.consultationFee;
+      } else if (formData.role === 'staff') {
+        registrationData.employee_id = formData.employeeId;
+        registrationData.department = formData.department;
+        registrationData.position = formData.position;
+      }
+
+      const response = await authHelpers.register(registrationData);
+
+      console.log('Registration successful:', response);
+      
+      // Redirect based on user type
+      if (response.user.user_type === 'staff') {
+        router.push('/receptionist');
+      } else if (response.user.user_type === 'doctor') {
+        router.push('/doctor');
+      } else {
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      let errorMessage = 'Registration failed. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('username already exists') || error.message.includes('unique')) {
+          errorMessage = 'This email is already registered. Please use a different email address.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -67,6 +147,13 @@ export default function SignUpPage() {
               </h1>
               <p className="text-gray-600">Join HealthPal to manage your appointments</p>
             </div>
+
+            {/* Error Display */}
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                {error}
+              </div>
+            )}
 
             {/* Sign Up Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -155,25 +242,191 @@ export default function SignUpPage() {
 
               {/* Role Selection */}
               <div className="fade-in stagger-4">
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
-                  I am a
+                <label className="block text-sm font-medium text-gray-700 mb-4">
+                  Account Type
                 </label>
-                <select
-                  id="role"
-                  name="role"
-                  value={formData.role}
-                  onChange={handleInputChange}
-                  className="search-input w-full px-4 py-3"
-                  required
-                >
-                  <option value="Patient">Patient</option>
-                  <option value="Doctor">Doctor</option>
-                  <option value="Receptionist">Receptionist</option>
-                </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ 
+                      ...prev, 
+                      role: 'doctor',
+                      // Reset non-doctor fields
+                      employeeId: '',
+                      department: '',
+                      position: '',
+                      emergencyContact: '',
+                      bloodGroup: '',
+                      medicalHistory: ''
+                    }))}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-center ${
+                      formData.role === 'doctor'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="font-medium">Doctor</div>
+                    <div className="text-xs mt-1">Manage patients</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ 
+                      ...prev, 
+                      role: 'staff',
+                      // Reset non-staff fields
+                      specialization: '',
+                      licenseNumber: '',
+                      experienceYears: 0,
+                      consultationFee: 0,
+                      emergencyContact: '',
+                      bloodGroup: '',
+                      medicalHistory: ''
+                    }))}
+                    className={`p-4 rounded-xl border-2 transition-all duration-200 text-center ${
+                      formData.role === 'staff'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="font-medium">Staff</div>
+                    <div className="text-xs mt-1">Receptionist</div>
+                  </button>
+                </div>
               </div>
 
+              {/* Doctor-specific fields */}
+              {formData.role === 'doctor' && (
+                <>
+                  <div className="fade-in stagger-5">
+                    <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-2">
+                      Specialization *
+                    </label>
+                    <input
+                      type="text"
+                      id="specialization"
+                      name="specialization"
+                      value={formData.specialization}
+                      onChange={handleInputChange}
+                      className="search-input w-full px-4 py-3"
+                      placeholder="e.g. Cardiology, Neurology"
+                      required
+                    />
+                  </div>
+                  <div className="fade-in stagger-6">
+                    <label htmlFor="licenseNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                      License Number *
+                    </label>
+                    <input
+                      type="text"
+                      id="licenseNumber"
+                      name="licenseNumber"
+                      value={formData.licenseNumber}
+                      onChange={handleInputChange}
+                      className="search-input w-full px-4 py-3"
+                      placeholder="Medical license number"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 fade-in stagger-7">
+                    <div>
+                      <label htmlFor="experienceYears" className="block text-sm font-medium text-gray-700 mb-2">
+                        Experience (Years)
+                      </label>
+                      <input
+                        type="number"
+                        id="experienceYears"
+                        name="experienceYears"
+                        value={formData.experienceYears}
+                        onChange={handleInputChange}
+                        className="search-input w-full px-4 py-3"
+                        min="0"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="consultationFee" className="block text-sm font-medium text-gray-700 mb-2">
+                        Consultation Fee ($)
+                      </label>
+                      <input
+                        type="number"
+                        id="consultationFee"
+                        name="consultationFee"
+                        value={formData.consultationFee}
+                        onChange={handleInputChange}
+                        className="search-input w-full px-4 py-3"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Staff-specific fields */}
+              {formData.role === 'staff' && (
+                <>
+                  <div className="fade-in stagger-5">
+                    <label htmlFor="employeeId" className="block text-sm font-medium text-gray-700 mb-2">
+                      Employee ID *
+                    </label>
+                    <input
+                      type="text"
+                      id="employeeId"
+                      name="employeeId"
+                      value={formData.employeeId}
+                      onChange={handleInputChange}
+                      className="search-input w-full px-4 py-3"
+                      placeholder="Employee ID"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 fade-in stagger-6">
+                    <div>
+                      <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-2">
+                        Department *
+                      </label>
+                      <select
+                        id="department"
+                        name="department"
+                        value={formData.department}
+                        onChange={handleInputChange}
+                        className="search-input w-full px-4 py-3"
+                        required
+                      >
+                        <option value="">Select Department</option>
+                        <option value="Reception">Reception</option>
+                        <option value="Administration">Administration</option>
+                        <option value="Nursing">Nursing</option>
+                        <option value="Pharmacy">Pharmacy</option>
+                        <option value="Laboratory">Laboratory</option>
+                        <option value="Radiology">Radiology</option>
+                        <option value="IT">IT Support</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="position" className="block text-sm font-medium text-gray-700 mb-2">
+                        Position *
+                      </label>
+                      <input
+                        type="text"
+                        id="position"
+                        name="position"
+                        value={formData.position}
+                        onChange={handleInputChange}
+                        className="search-input w-full px-4 py-3"
+                        placeholder="e.g. Receptionist, Nurse"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+
+
               {/* Password Field */}
-              <div className="fade-in stagger-5">
+              <div className="fade-in stagger-8">
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                   Password
                 </label>
@@ -206,7 +459,7 @@ export default function SignUpPage() {
               </div>
 
               {/* Confirm Password Field */}
-              <div className="fade-in stagger-6">
+              <div className="fade-in stagger-9">
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                   Confirm Password
                 </label>
@@ -239,7 +492,7 @@ export default function SignUpPage() {
               </div>
 
               {/* Terms and Conditions */}
-              <div className="flex items-center fade-in stagger-7">
+              <div className="flex items-center fade-in stagger-10">
                 <input
                   id="termsAccepted"
                   name="termsAccepted"
@@ -264,9 +517,21 @@ export default function SignUpPage() {
               {/* Sign Up Button */}
               <button
                 type="submit"
-                className="btn-primary w-full py-3 fade-in stagger-1"
+                disabled={isLoading}
+                className={`w-full py-3 fade-in stagger-1 rounded-xl font-medium transition-colors ${
+                  isLoading
+                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    : 'btn-primary'
+                }`}
               >
-                Create Account
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                    Creating Account...
+                  </div>
+                ) : (
+                  'Create Account'
+                )}
               </button>
             </form>
 
@@ -319,20 +584,12 @@ export default function SignUpPage() {
               <h3 className="text-sm font-semibold text-gray-800 mb-3">Demo Accounts</h3>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-white/60 p-2 rounded-lg">
-                  <p className="font-medium text-gray-700">Patient</p>
-                  <p className="text-gray-600">patient@demo.com</p>
-                </div>
-                <div className="bg-white/60 p-2 rounded-lg">
                   <p className="font-medium text-gray-700">Doctor</p>
                   <p className="text-gray-600">doctor@demo.com</p>
                 </div>
                 <div className="bg-white/60 p-2 rounded-lg">
                   <p className="font-medium text-gray-700">Staff</p>
                   <p className="text-gray-600">staff@demo.com</p>
-                </div>
-                <div className="bg-white/60 p-2 rounded-lg">
-                  <p className="font-medium text-gray-700">Admin</p>
-                  <p className="text-gray-600">admin@demo.com</p>
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-2">Password: demo123</p>

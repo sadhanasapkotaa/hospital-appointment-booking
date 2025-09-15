@@ -299,3 +299,139 @@ def payments(request):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Doctor Dashboard Views
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def doctor_dashboard(request):
+    """Get comprehensive dashboard data for doctors"""
+    if request.user.user_type != 'doctor':
+        return Response({'error': 'Access denied. Doctor account required.'}, 
+                       status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        doctor = Doctor.objects.get(user=request.user)
+        today = timezone.now().date()
+        
+        # Get appointments
+        all_appointments = Appointment.objects.filter(doctor=doctor)
+        today_appointments = all_appointments.filter(appointment_date=today)
+        
+        # Get patients (unique from appointments)
+        patients_data = []
+        patient_ids = set()
+        
+        for appointment in all_appointments.select_related('patient__user'):
+            if appointment.patient.user.id not in patient_ids:
+                patient_ids.add(appointment.patient.user.id)
+                patients_data.append({
+                    'id': appointment.patient.user.id,
+                    'firstName': appointment.patient.user.first_name,
+                    'lastName': appointment.patient.user.last_name,
+                    'email': appointment.patient.user.email,
+                    'phone': appointment.patient.user.phone,
+                    'dateOfBirth': appointment.patient.user.date_of_birth,
+                    'isFirstTime': not all_appointments.filter(patient=appointment.patient, status='completed').exists(),
+                    'bloodGroup': getattr(appointment.patient, 'blood_group', ''),
+                    'emergencyContact': getattr(appointment.patient, 'emergency_contact', ''),
+                })
+        
+        # Get visits/appointments with patient details
+        visits_data = []
+        for appointment in today_appointments.select_related('patient__user'):
+            visits_data.append({
+                'id': str(appointment.id),
+                'patientId': str(appointment.patient.user.id),
+                'doctorId': str(doctor.user.id),
+                'doctorName': f"Dr. {doctor.user.first_name} {doctor.user.last_name}",
+                'specialty': doctor.specialization,
+                'date': appointment.appointment_date.strftime('%Y-%m-%d'),
+                'time': appointment.appointment_time.strftime('%H:%M'),
+                'symptoms': appointment.symptoms or appointment.reason,
+                'currentDisease': appointment.reason,
+                'urgencyLevel': appointment.priority,
+                'notes': appointment.notes or '',
+                'status': appointment.status,
+            })
+        
+        # Get medical history
+        medical_history = []
+        medical_records = MedicalRecord.objects.filter(
+            appointment__doctor=doctor
+        ).select_related('appointment__patient__user').order_by('-created_at')[:20]
+        
+        for record in medical_records:
+            medical_history.append({
+                'id': str(record.id),
+                'patientId': str(record.appointment.patient.user.id),
+                'visitId': str(record.appointment.id),
+                'date': record.appointment.appointment_date.strftime('%Y-%m-%d'),
+                'diagnosis': record.diagnosis,
+                'prescription': record.prescription or '',
+                'doctorName': f"Dr. {doctor.user.first_name} {doctor.user.last_name}",
+                'followUpRequired': bool(record.follow_up_date),
+                'followUpDate': record.follow_up_date.strftime('%Y-%m-%d') if record.follow_up_date else '',
+                'notes': record.doctor_notes or '',
+            })
+        
+        # Statistics
+        stats = {
+            'totalPatients': len(patients_data),
+            'todayAppointments': today_appointments.count(),
+            'arrivedPatients': today_appointments.filter(status='arrived').count(),
+            'completedToday': today_appointments.filter(status='completed').count(),
+        }
+        
+        return Response({
+            'doctor': {
+                'id': doctor.user.id,
+                'name': f"Dr. {doctor.user.first_name} {doctor.user.last_name}",
+                'specialization': doctor.specialization,
+                'email': doctor.user.email,
+            },
+            'patients': patients_data,
+            'visits': visits_data,
+            'medicalHistory': medical_history,
+            'stats': stats,
+        })
+        
+    except Doctor.DoesNotExist:
+        return Response({'error': 'Doctor profile not found'}, 
+                       status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, 
+                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_appointment_status(request, appointment_id):
+    """Update appointment status"""
+    if request.user.user_type not in ['doctor', 'staff']:
+        return Response({'error': 'Access denied'}, 
+                       status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        appointment = Appointment.objects.get(id=appointment_id)
+        
+        # If doctor, ensure they own this appointment
+        if request.user.user_type == 'doctor':
+            doctor = Doctor.objects.get(user=request.user)
+            if appointment.doctor != doctor:
+                return Response({'error': 'Access denied'}, 
+                               status=status.HTTP_403_FORBIDDEN)
+        
+        new_status = request.data.get('status')
+        if new_status in ['scheduled', 'confirmed', 'arrived', 'in_progress', 'completed', 'cancelled', 'no_show']:
+            appointment.status = new_status
+            if 'notes' in request.data:
+                appointment.notes = request.data.get('notes', '')
+            appointment.save()
+            
+            return Response({'message': 'Status updated successfully', 'status': new_status})
+        else:
+            return Response({'error': 'Invalid status'}, 
+                           status=status.HTTP_400_BAD_REQUEST)
+            
+    except (Appointment.DoesNotExist, Doctor.DoesNotExist):
+        return Response({'error': 'Appointment not found'}, 
+                       status=status.HTTP_404_NOT_FOUND)

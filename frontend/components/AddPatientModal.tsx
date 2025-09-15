@@ -1,6 +1,7 @@
 'use client'
 import React, { useState } from 'react'
 import { FiX, FiUser, FiPhone, FiMail, FiCalendar, FiMapPin } from 'react-icons/fi'
+import { apiClient } from '../app/api/api'
 
 interface Patient {
   id: string
@@ -73,14 +74,28 @@ export default function AddPatientModal({ isOpen, onClose, onSave }: AddPatientM
     setIsLoading(true)
     
     try {
-      // Generate a temporary ID for demo purposes
-      const patientWithId: Patient = {
-        ...formData,
-        id: `patient_${Date.now()}`
+      // Call the API to add patient
+      const response = await apiClient.addPatient(formData)
+      
+      // Create patient object for the frontend with the response data
+      const newPatient: Patient = {
+        id: response.patient.id.toString(),
+        firstName: response.patient.firstName,
+        lastName: response.patient.lastName,
+        email: response.patient.email,
+        phone: response.patient.phone,
+        dateOfBirth: response.patient.dateOfBirth,
+        gender: response.patient.gender,
+        address: response.patient.address,
+        emergencyContact: response.patient.emergencyContact,
+        emergencyPhone: response.patient.emergencyPhone,
+        isFirstTime: response.patient.isFirstTime,
+        bloodGroup: response.patient.bloodGroup,
+        allergies: response.patient.allergies,
+        chronicConditions: response.patient.chronicConditions
       }
       
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
-      onSave(patientWithId)
+      onSave(newPatient)
       
       // Reset form
       setFormData({
@@ -100,8 +115,13 @@ export default function AddPatientModal({ isOpen, onClose, onSave }: AddPatientM
       })
       
       onClose()
-    } catch (error) {
+      
+      // Show success message (optional)
+      alert('Patient added successfully!')
+      
+    } catch (error: any) {
       console.error('Error saving patient:', error)
+      alert(`Error adding patient: ${error.message || 'Unknown error'}`)
     } finally {
       setIsLoading(false)
     }

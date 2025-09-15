@@ -1,8 +1,11 @@
 'use client'
 import React, { useState } from 'react'
 import { FaUser, FaUserMd, FaEye, FaEyeSlash } from 'react-icons/fa'
+import { authHelpers } from '../api/api'
+import { useRouter } from 'next/navigation'
 
 const LoginPage = () => {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<'staff' | 'doctor'>('staff')
   const [formData, setFormData] = useState({
     email: '',
@@ -10,6 +13,7 @@ const LoginPage = () => {
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -22,22 +26,28 @@ const LoginPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError('')
     
     try {
-      // TODO: Implement actual login logic here
-      console.log('Login attempt:', { ...formData, userType: activeTab })
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await authHelpers.login({
+        email: formData.email,
+        password: formData.password,
+        user_type: activeTab
+      })
+
+      console.log('Login successful:', response)
       
       // Redirect based on user type
-      if (activeTab === 'staff') {
-        window.location.href = '/receptionist'
+      if (response.user.user_type === 'staff') {
+        router.push('/receptionist')
+      } else if (response.user.user_type === 'doctor') {
+        router.push('/doctor')
       } else {
-        window.location.href = '/doctor'
+        router.push('/')
       }
     } catch (error) {
       console.error('Login error:', error)
+      setError(error instanceof Error ? error.message : 'Login failed. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -81,6 +91,11 @@ const LoginPage = () => {
 
         {/* Form */}
         <div className="p-6">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email Input */}
             <div>

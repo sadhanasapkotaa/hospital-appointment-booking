@@ -1,6 +1,7 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { FiX, FiCalendar, FiClock, FiUser, FiFileText, FiAlertCircle } from 'react-icons/fi'
+import { apiClient } from '../app/api/api'
 
 interface Patient {
   id: string
@@ -9,6 +10,19 @@ interface Patient {
   email: string
   phone: string
   isFirstTime: boolean
+}
+
+interface Doctor {
+  id: string
+  name: string
+  firstName: string
+  lastName: string
+  email: string
+  specialization: string
+  license_number: string
+  experience_years: number
+  consultation_fee: string
+  is_available: boolean
 }
 
 interface Visit {
@@ -47,13 +61,7 @@ interface AssignVisitModalProps {
   onSave: (visit: Visit) => void
 }
 
-const doctors = [
-  { id: 'dr1', name: 'Dr. Sarah Johnson', specialty: 'Cardiology' },
-  { id: 'dr2', name: 'Dr. Michael Chen', specialty: 'Dermatology' },
-  { id: 'dr3', name: 'Dr. Emily Davis', specialty: 'Pediatrics' },
-  { id: 'dr4', name: 'Dr. Robert Miller', specialty: 'Orthopedics' },
-  { id: 'dr5', name: 'Dr. Lisa Anderson', specialty: 'Neurology' }
-]
+
 
 const timeSlots = [
   '09:00', '09:15', '09:30', '09:45',
@@ -66,6 +74,8 @@ const timeSlots = [
 
 export default function AssignVisitModal({ isOpen, onClose, patient, patients = [], onSave }: AssignVisitModalProps) {
   const [selectedPatientId, setSelectedPatientId] = useState<string>('')
+  const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [doctorsLoading, setDoctorsLoading] = useState(false)
   const [formData, setFormData] = useState<VisitFormData>({
     doctorId: '',
     doctorName: '',
@@ -82,7 +92,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
   const [isLoading, setIsLoading] = useState(false)
 
   // Reset selectedPatientId when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       if (patient) {
         setSelectedPatientId(patient.id)
@@ -91,6 +101,26 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
       }
     }
   }, [isOpen, patient])
+
+  // Fetch doctors when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchDoctors()
+    }
+  }, [isOpen])
+
+  const fetchDoctors = async () => {
+    try {
+      setDoctorsLoading(true)
+      const response = await apiClient.getDoctors()
+      setDoctors(response.doctors || [])
+    } catch (error) {
+      console.error('Error fetching doctors:', error)
+      setDoctors([])
+    } finally {
+      setDoctorsLoading(false)
+    }
+  }
 
   // Get the currently selected patient
   const currentPatient = patient || patients.find(p => p.id === selectedPatientId) || null
@@ -111,7 +141,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
       ...prev,
       doctorId,
       doctorName: doctor?.name || '',
-      specialty: doctor?.specialty || ''
+      specialty: doctor?.specialization || ''
     }))
   }
 
@@ -248,15 +278,23 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
                 value={formData.doctorId}
                 onChange={handleDoctorChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={doctorsLoading}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
               >
-                <option value="">Choose a doctor</option>
+                <option value="">
+                  {doctorsLoading ? 'Loading doctors...' : 'Choose a doctor'}
+                </option>
                 {doctors.map(doctor => (
                   <option key={doctor.id} value={doctor.id}>
-                    {doctor.name} - {doctor.specialty}
+                    {doctor.name} - {doctor.specialization}
                   </option>
                 ))}
               </select>
+              {doctors.length === 0 && !doctorsLoading && (
+                <p className="mt-2 text-sm text-red-600">
+                  No doctors available. Please contact administration.
+                </p>
+              )}
             </div>
 
             {/* Date and Time */}

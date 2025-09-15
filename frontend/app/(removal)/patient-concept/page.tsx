@@ -1,7 +1,25 @@
 import React from "react";
 import { FiCalendar, FiClock, FiUser, FiLogOut, FiPlus, FiHeart, FiTrash2 } from "react-icons/fi";
+import { authHelpers } from '../../api/api';
+import { useRouter } from 'next/navigation';
 
 export default function PatientDashboard() {
+  const router = useRouter()
+
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await authHelpers.logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Force logout even if API call fails
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token')
+        router.push('/login')
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
@@ -23,7 +41,10 @@ export default function PatientDashboard() {
               <div className="flex items-center bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2 rounded-xl">
                 <span className="text-sm font-medium text-blue-700">John Doe (Patient)</span>
               </div>
-              <button className="btn-primary flex items-center space-x-2">
+              <button 
+                onClick={handleLogout}
+                className="btn-primary flex items-center space-x-2"
+              >
                 <FiLogOut size={16} />
                 <span>Logout</span>
               </button>
