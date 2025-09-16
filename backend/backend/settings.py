@@ -128,15 +128,16 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS settings
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://friendly-space-trout-xq5jrxgp446hprw-3000.app.github.dev",
 ]
-
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # For development only
-CORS_ALLOWED_HEADERS = [
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.github\.dev$",
+]
+CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
     'authorization',

@@ -90,9 +90,12 @@ class TimeSlotSerializer(serializers.ModelSerializer):
         fields = ['id', 'doctor', 'doctor_name', 'doctor_specialization', 'date', 'start_time', 'end_time', 'is_available', 'is_booked']
 
 class AppointmentCreateSerializer(serializers.ModelSerializer):
+    patient = serializers.PrimaryKeyRelatedField(queryset=Patient.objects.all())
+    doctor = serializers.PrimaryKeyRelatedField(queryset=Doctor.objects.all())
+
     class Meta:
         model = Appointment
-        fields = ['doctor', 'appointment_date', 'appointment_time', 'reason', 'symptoms', 'priority', 'is_first_visit']
+        fields = ['patient', 'doctor', 'appointment_date', 'appointment_time', 'reason', 'symptoms', 'priority', 'is_first_visit']
     
     def validate_appointment_date(self, value):
         if value < timezone.now().date():
@@ -116,10 +119,6 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
-        # Set the patient from the request user
-        patient = Patient.objects.get(user=self.context['request'].user)
-        validated_data['patient'] = patient
-        
         appointment = Appointment.objects.create(**validated_data)
         
         # Create or update the time slot
@@ -156,7 +155,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
         fields = ['id', 'patient', 'patient_name', 'patient_email', 'patient_phone',
                  'doctor', 'doctor_name', 'doctor_specialization', 'appointment_date',
                  'appointment_time', 'status', 'priority', 'reason', 'notes', 'symptoms',
-                 'is_first_visit', 'estimated_duration', 'created_at', 'updated_at']
+                 'is_first_visit', 'created_at', 'updated_at']
 
 class AppointmentUpdateSerializer(serializers.ModelSerializer):
     class Meta:

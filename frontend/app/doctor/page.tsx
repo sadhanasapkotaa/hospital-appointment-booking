@@ -51,181 +51,11 @@ interface MedicalHistory {
   notes?: string
 }
 
-// Mock data for doctor's assigned patients and visits
-const mockPatients: Patient[] = [
-  {
-    id: 'patient_1',
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@email.com',
-    phone: '+1-555-0123',
-    dateOfBirth: '1985-06-15',
-    gender: 'male',
-    address: '123 Main St, City, State 12345',
-    emergencyContact: 'Jane Doe',
-    emergencyPhone: '+1-555-0124',
-    isFirstTime: false,
-    bloodGroup: 'A+',
-    allergies: 'Penicillin',
-    chronicConditions: 'Hypertension'
-  },
-  {
-    id: 'patient_2',
-    firstName: 'Maria',
-    lastName: 'Garcia',
-    email: 'maria.garcia@email.com',
-    phone: '+1-555-0125',
-    dateOfBirth: '1978-03-22',
-    gender: 'female',
-    address: '456 Oak Avenue, City, State 12345',
-    emergencyContact: 'Carlos Garcia',
-    emergencyPhone: '+1-555-0126',
-    isFirstTime: true,
-    bloodGroup: 'O-',
-    allergies: 'Shellfish',
-    chronicConditions: 'Diabetes Type 2'
-  },
-  {
-    id: 'patient_3',
-    firstName: 'Robert',
-    lastName: 'Smith',
-    email: 'robert.smith@email.com',
-    phone: '+1-555-0127',
-    dateOfBirth: '1965-11-08',
-    gender: 'male',
-    address: '789 Pine Street, City, State 12345',
-    emergencyContact: 'Linda Smith',
-    emergencyPhone: '+1-555-0128',
-    isFirstTime: false,
-    bloodGroup: 'B+',
-    allergies: 'None',
-    chronicConditions: 'High Cholesterol, Hypertension'
-  }
-]
 
-const mockVisits: Visit[] = [
-  {
-    id: 'visit_1',
-    patientId: 'patient_1',
-    doctorId: 'dr1',
-    doctorName: 'Dr. Sarah Johnson',
-    specialty: 'Cardiology',
-    date: '2025-09-11', // Today's date
-    time: '09:00',
-    symptoms: 'Chest pain, shortness of breath during exercise',
-    currentDisease: 'Cardiac evaluation follow-up',
-    urgencyLevel: 'normal',
-    status: 'arrived',
-    notes: 'Patient reports symptoms worsening over past week. Previous ECG showed minor irregularities.'
-  },
-  {
-    id: 'visit_2',
-    patientId: 'patient_2',
-    doctorId: 'dr1',
-    doctorName: 'Dr. Sarah Johnson',
-    specialty: 'Cardiology',
-    date: '2025-09-11', // Today's date
-    time: '10:30',
-    symptoms: 'Fatigue, dizziness, irregular heartbeat',
-    currentDisease: 'First-time cardiac consultation',
-    urgencyLevel: 'high',
-    status: 'arrived',
-    notes: 'New patient referral from family doctor. Recent episodes of palpitations.'
-  },
-  {
-    id: 'visit_3',
-    patientId: 'patient_3',
-    doctorId: 'dr1',
-    doctorName: 'Dr. Sarah Johnson',
-    specialty: 'Cardiology',
-    date: '2025-09-11', // Today's date
-    time: '14:00',
-    symptoms: 'High blood pressure readings at home',
-    currentDisease: 'Hypertension management',
-    urgencyLevel: 'normal',
-    status: 'scheduled',
-    notes: 'Regular follow-up for blood pressure management. Patient on Lisinopril.'
-  },
-  {
-    id: 'visit_4',
-    patientId: 'patient_1',
-    doctorId: 'dr1',
-    doctorName: 'Dr. Sarah Johnson',
-    specialty: 'Cardiology',
-    date: '2025-09-10', // Yesterday - completed
-    time: '11:00',
-    symptoms: 'Chest pain follow-up',
-    currentDisease: 'Post-stress test evaluation',
-    urgencyLevel: 'normal',
-    status: 'completed',
-    notes: 'Stress test results reviewed. No significant abnormalities found.'
-  }
-]
-
-const mockMedicalHistory: MedicalHistory[] = [
-  {
-    id: 'history_1',
-    patientId: 'patient_1',
-    visitId: 'visit_old_1',
-    date: '2025-08-15',
-    diagnosis: 'Essential Hypertension',
-    prescription: 'Lisinopril 10mg daily, lifestyle modifications (low sodium diet, regular exercise)',
-    doctorName: 'Dr. Sarah Johnson',
-    followUpRequired: true,
-    followUpDate: '2025-09-15',
-    notes: 'Blood pressure well controlled, continue current medication. Patient compliant with treatment.'
-  },
-  {
-    id: 'history_2',
-    patientId: 'patient_1',
-    visitId: 'visit_old_2',
-    date: '2025-07-20',
-    diagnosis: 'Chest Pain - Non-cardiac',
-    prescription: 'Ibuprofen 400mg as needed, muscle relaxants',
-    doctorName: 'Dr. Sarah Johnson',
-    followUpRequired: false,
-    notes: 'Musculoskeletal chest pain. ECG and stress test normal. Advised on posture improvement.'
-  },
-  {
-    id: 'history_3',
-    patientId: 'patient_3',
-    visitId: 'visit_old_3',
-    date: '2025-08-01',
-    diagnosis: 'Hyperlipidemia, Hypertension',
-    prescription: 'Atorvastatin 20mg daily, Amlodipine 5mg daily',
-    doctorName: 'Dr. Sarah Johnson',
-    followUpRequired: true,
-    followUpDate: '2025-10-01',
-    notes: 'Cholesterol levels improved. Blood pressure under control. Continue current regimen.'
-  },
-  {
-    id: 'history_4',
-    patientId: 'patient_3',
-    visitId: 'visit_old_4',
-    date: '2025-06-15',
-    diagnosis: 'Coronary Artery Disease - Stable',
-    prescription: 'Metoprolol 50mg twice daily, Aspirin 81mg daily, Clopidogrel 75mg daily',
-    doctorName: 'Dr. Sarah Johnson',
-    followUpRequired: true,
-    followUpDate: '2025-09-15',
-    notes: 'Post-angioplasty follow-up. Stent patent. No chest pain. Exercise tolerance improved.'
-  },
-  {
-    id: 'history_5',
-    patientId: 'patient_2',
-    visitId: 'visit_old_5',
-    date: '2025-08-25',
-    diagnosis: 'Type 2 Diabetes - Newly Diagnosed',
-    prescription: 'Metformin 500mg twice daily, dietary counseling',
-    doctorName: 'Dr. Michael Brown',
-    followUpRequired: true,
-    followUpDate: '2025-09-25',
-    notes: 'HbA1c 8.2%. Started on Metformin. Referred to nutritionist. Blood sugar monitoring initiated.'
-  }
-]
 
 export default function DoctorDashboard() {
   const router = useRouter()
+  const [doctor, setDoctor] = useState<{ id: number, name: string, specialization: string, email: string } | null>(null)
   const [patients, setPatients] = useState<Patient[]>([])
   const [visits, setVisits] = useState<Visit[]>([])
   const [medicalHistory, setMedicalHistory] = useState<MedicalHistory[]>([])
@@ -265,6 +95,7 @@ export default function DoctorDashboard() {
         setLoading(true)
         const data = await apiClient.getDoctorDashboard()
         
+        setDoctor(data.doctor || null)
         setPatients(data.patients || [])
         setVisits(data.visits || [])
         setMedicalHistory(data.medicalHistory || [])
@@ -275,10 +106,28 @@ export default function DoctorDashboard() {
           completedToday: 0
         })
         
+        // Log data for debugging
+        console.log('Doctor dashboard data loaded successfully:', {
+          doctor: data.doctor?.name,
+          appointmentsCount: data.visits?.length || 0,
+          patientsCount: data.patients?.length || 0
+        })
+        
         setError('')
       } catch (err) {
         console.error('Error fetching dashboard data:', err)
         setError(err instanceof Error ? err.message : 'Failed to load dashboard data')
+        // Fall back to empty state instead of mock data
+        setDoctor(null)
+        setPatients([])
+        setVisits([])
+        setMedicalHistory([])
+        setStats({
+          totalPatients: 0,
+          todayAppointments: 0,
+          arrivedPatients: 0,
+          completedToday: 0
+        })
       } finally {
         setLoading(false)
       }
@@ -308,33 +157,46 @@ export default function DoctorDashboard() {
     }
   }
 
-  const handleSavePrescription = (prescriptionData: any) => {
-    // Add to medical history
-    const newMedicalRecord: MedicalHistory = {
-      id: `history_${Date.now()}`,
-      patientId: prescriptionData.patientId,
-      visitId: prescriptionData.visitId,
-      date: prescriptionData.date,
-      diagnosis: prescriptionData.diagnosis,
-      prescription: prescriptionData.prescriptions.map((p: any) => 
+    const handleSavePrescription = async (prescriptionData: any) => {
+    try {
+      // Format prescriptions into a single string
+      const prescriptionText = prescriptionData.prescriptions.map((p: any) => 
         `${p.medication} ${p.dosage} - ${p.frequency} for ${p.duration}${p.instructions ? ` (${p.instructions})` : ''}`
-      ).join('; '),
-      doctorName: prescriptionData.doctorName,
-      followUpRequired: prescriptionData.followUpRequired,
-      followUpDate: prescriptionData.followUpDate,
-      notes: prescriptionData.treatmentNotes
-    }
-    
-    setMedicalHistory([...medicalHistory, newMedicalRecord])
-    
-    // Mark visit as completed and stop timer
-    setVisits(visits.map(v => 
-      v.id === prescriptionData.visitId ? { ...v, status: 'completed' as const } : v
-    ))
-    
-    // Stop timer if active
-    if (activeTimer === prescriptionData.visitId) {
-      setActiveTimer(null)
+      ).join('; ')
+      
+      // Save medical record to backend
+      await apiClient.createMedicalRecord({
+        appointment: parseInt(prescriptionData.visitId),
+        diagnosis: prescriptionData.diagnosis,
+        prescription: prescriptionText,
+        doctor_notes: prescriptionData.treatmentNotes,
+        follow_up_date: prescriptionData.followUpRequired ? prescriptionData.followUpDate : null
+      })
+      
+      // Update appointment status to completed
+      await updateAppointmentStatus(prescriptionData.visitId, 'completed', prescriptionData.treatmentNotes)
+      
+      // Stop timer if active
+      if (activeTimer === prescriptionData.visitId) {
+        setActiveTimer(null)
+      }
+      
+      // Refresh dashboard data to show updated records
+      const data = await apiClient.getDoctorDashboard()
+      setDoctor(data.doctor || null)
+      setPatients(data.patients || [])
+      setVisits(data.visits || [])
+      setMedicalHistory(data.medicalHistory || [])
+      setStats(data.stats || {
+        totalPatients: 0,
+        todayAppointments: 0,
+        arrivedPatients: 0,
+        completedToday: 0
+      })
+      
+    } catch (error) {
+      console.error('Error saving prescription:', error)
+      setError('Failed to save prescription. Please try again.')
     }
   }
 
@@ -396,14 +258,19 @@ export default function DoctorDashboard() {
     switch (status) {
       case 'completed':
         return 'bg-green-100 text-green-800 border-green-200'
-      case 'arrived':
+      case 'confirmed':
         return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'scheduled':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'cancelled':
+      case 'no_show':
+        return 'bg-red-100 text-red-800 border-red-200'
+      case 'arrived':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200'
       case 'in_progress':
         return 'bg-orange-100 text-orange-800 border-orange-200'
-      case 'cancelled':
-        return 'bg-gray-100 text-gray-800 border-gray-200'
       default:
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+        return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
 
@@ -412,25 +279,69 @@ export default function DoctorDashboard() {
   const todayAppointments = stats.todayAppointments || visits.filter(v => 
     v.date === new Date().toISOString().split('T')[0]
   ).length
-  const arrivedPatients = stats.arrivedPatients || visits.filter(v => 
-    v.date === new Date().toISOString().split('T')[0] && v.status === 'arrived'
+  const waitingRoomCount = stats.arrivedPatients || visits.filter(v => 
+    v.date === new Date().toISOString().split('T')[0] && ['scheduled', 'confirmed'].includes(v.status)
   ).length
   const completedToday = stats.completedToday || visits.filter(v => 
     v.date === new Date().toISOString().split('T')[0] && v.status === 'completed'
   ).length
-  const pendingVisits = visits.filter(v => v.status === 'scheduled').length
 
-  // Get today's visits with patient information
-  const todayVisitsWithPatients = visits
-    .filter(v => v.date === new Date().toISOString().split('T')[0])
+  // Get all visits with patient information
+  const allVisitsWithPatients = visits
     .map(visit => {
       const patient = patients.find(p => p.id === visit.patientId)
       return { ...visit, patient }
     })
     .filter(visit => visit.patient)
+    .sort((a, b) => {
+      // Sort by date (most recent first), then by time
+      const dateComparison = new Date(b.date).getTime() - new Date(a.date).getTime()
+      if (dateComparison !== 0) return dateComparison
+      return a.time.localeCompare(b.time)
+    })
 
-  // Get waiting room patients (arrived status)
+  // Get today's visits for statistics
+  const todayVisitsWithPatients = allVisitsWithPatients.filter(v => 
+    v.date === new Date().toISOString().split('T')[0]
+  )
+
+  // Separate all appointments by status
+  const pendingAppointments = allVisitsWithPatients.filter(v => 
+    ['scheduled', 'confirmed'].includes(v.status)
+  )
+  const completedAppointments = allVisitsWithPatients.filter(v => 
+    v.status === 'completed'
+  )
+  const cancelledAppointments = allVisitsWithPatients.filter(v => 
+    ['cancelled', 'no_show'].includes(v.status)
+  )
+
+  // Get waiting room patients (arrived status - if this status exists)
   const waitingRoomPatients = todayVisitsWithPatients.filter(v => v.status === 'arrived')
+
+  // Helper function to format date for display
+  const formatDisplayDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    
+    if (dateString === today.toISOString().split('T')[0]) {
+      return 'Today'
+    } else if (dateString === tomorrow.toISOString().split('T')[0]) {
+      return 'Tomorrow'
+    } else if (dateString === yesterday.toISOString().split('T')[0]) {
+      return 'Yesterday'
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric' 
+      })
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -451,7 +362,9 @@ export default function DoctorDashboard() {
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-2 rounded-xl">
-                <span className="text-sm font-medium text-blue-700">Dr. Sarah Johnson (Cardiology)</span>
+                <span className="text-sm font-medium text-blue-700">
+                  {doctor ? `${doctor.name} (${doctor.specialization})` : 'Loading...'}
+                </span>
               </div>
               <button 
                 onClick={handleLogout}
@@ -495,9 +408,11 @@ export default function DoctorDashboard() {
             {/* Welcome Section */}
         <div className="mb-8 fade-in">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent mb-2">
-            Welcome, Dr. Sarah Johnson
+            Welcome, {doctor ? doctor.name : 'Doctor'}
           </h1>
-          <p className="text-gray-600">Cardiology • Today's Schedule & Patient Management</p>
+          <p className="text-gray-600">
+            {doctor ? `${doctor.specialization} • Today's Schedule & Patient Management` : 'Today\'s Schedule & Patient Management'}
+          </p>
         </div>
 
         {/* Stats Cards */}
@@ -532,8 +447,8 @@ export default function DoctorDashboard() {
                 <FiUserCheck className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Waiting Room</p>
-                <p className="text-2xl font-bold text-gray-900">{arrivedPatients}</p>
+                <p className="text-sm font-medium text-gray-600">Pending Today</p>
+                <p className="text-2xl font-bold text-gray-900">{waitingRoomCount}</p>
               </div>
             </div>
           </div>
@@ -561,100 +476,9 @@ export default function DoctorDashboard() {
           </div>
         )}
 
-        {/* Waiting Room */}
-        {waitingRoomPatients.length > 0 && (
-          <div className="mb-8 hover:scale-105 transition-transform duration-300 fade-in stagger-1">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
-              <div className="flex items-center mb-6">
-                <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl mr-3">
-                  <FiUserCheck className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Waiting Room</h2>
-                  <p className="text-sm text-gray-600">Patients who have arrived and are waiting</p>
-                </div>
-              </div>
-              
-              <div className="overflow-x-auto rounded-xl">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient ID</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient Name</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Appointment Time</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Timer</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {waitingRoomPatients.map((visit) => (
-                      <tr key={visit.id} className="bg-white/50 backdrop-blur-sm hover:bg-white/70 transition-all duration-200">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{visit.patient!.id}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-xs mr-3">
-                              {visit.patient!.firstName[0]}{visit.patient!.lastName[0]}
-                            </div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {visit.patient!.firstName} {visit.patient!.lastName}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{visit.time}</td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center space-x-2">
-                            <span className={`text-sm font-mono ${
-                              activeTimer === visit.id ? 'text-orange-600 font-bold' : 'text-gray-600'
-                            }`}>
-                              {formatTime(timerSeconds[visit.id] || 0)}
-                            </span>
-                            {activeTimer === visit.id ? (
-                              <button
-                                onClick={pauseTimer}
-                                className="p-1 rounded bg-orange-100 text-orange-600 hover:bg-orange-200"
-                                title="Pause Timer"
-                              >
-                                <FiPause size={14} />
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => startTimer(visit.id)}
-                                className="p-1 rounded bg-green-100 text-green-600 hover:bg-green-200"
-                                title="Start Timer"
-                              >
-                                <FiPlay size={14} />
-                              </button>
-                            )}
-                            <button
-                              onClick={() => resetTimer(visit.id)}
-                              className="p-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200"
-                              title="Reset Timer"
-                            >
-                              <FiClock size={14} />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleViewPatient(visit.patient!, visit)}
-                            className="p-2 rounded-lg transition-all duration-200 hover:scale-110 bg-blue-100 text-blue-600 hover:bg-blue-200"
-                            title="View Patient"
-                          >
-                            <FiEye size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Today's Patients */}
+          {/* All Appointments */}
           <div className="hover:scale-105 transition-transform duration-300 fade-in stagger-2">
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
               <div className="flex items-center mb-6">
@@ -662,114 +486,141 @@ export default function DoctorDashboard() {
                   <FiUsers className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Today's Patients</h2>
-                  <p className="text-sm text-gray-600">Scheduled appointments for today</p>
+                  <h2 className="text-xl font-bold text-gray-900">All Appointments</h2>
+                  <p className="text-sm text-gray-600">All scheduled appointments (sorted by date)</p>
                 </div>
               </div>
               
-              {todayVisitsWithPatients.length === 0 ? (
+              {allVisitsWithPatients.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                   <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4">
                     <FiCalendar size={24} />
                   </div>
-                  <p className="text-sm font-medium">No appointments scheduled for today</p>
-                  <p className="text-xs text-gray-400 mt-1">Enjoy your free time!</p>
+                  <p className="text-sm font-medium">No appointments scheduled</p>
+                  <p className="text-xs text-gray-400 mt-1">You have no appointments at this time!</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {todayVisitsWithPatients.map((visit) => (
-                    <div key={visit.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold mr-4">
-                            {visit.patient!.firstName[0]}{visit.patient!.lastName[0]}
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900">
-                              {visit.patient!.firstName} {visit.patient!.lastName}
-                            </h3>
-                            <p className="text-sm text-gray-600">{visit.time} • {visit.currentDisease}</p>
-                            <div className="flex items-center mt-1">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(visit.status)}`}>
-                                {visit.status === 'in_progress' ? 'In Progress' : 
-                                 visit.status === 'arrived' ? 'Arrived' :
-                                 visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
-                              </span>
-                              <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                visit.patient!.isFirstTime 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-purple-100 text-purple-800'
-                              }`}>
-                                {visit.patient!.isFirstTime ? 'First Time' : 'Returning'}
-                              </span>
-                              <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                visit.urgencyLevel === 'critical' ? 'bg-red-100 text-red-800' :
-                                visit.urgencyLevel === 'high' ? 'bg-orange-100 text-orange-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {visit.urgencyLevel}
-                              </span>
+                <div className="space-y-6">
+                  {/* Pending Appointments */}
+                  {pendingAppointments.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                        <FiClock className="mr-2" size={18} />
+                        Pending Appointments ({pendingAppointments.length})
+                      </h3>
+                      <div className="space-y-3">
+                        {pendingAppointments.map((visit) => (
+                          <div key={visit.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold mr-4">
+                                  {visit.patient!.firstName[0]}{visit.patient!.lastName[0]}
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-gray-900">
+                                    {visit.patient!.firstName} {visit.patient!.lastName}
+                                  </h3>
+                                  <p className="text-sm text-gray-600">{formatDisplayDate(visit.date)} at {visit.time} • {visit.currentDisease}</p>
+                                  <div className="flex items-center mt-1">
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(visit.status)}`}>
+                                      {visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
+                                    </span>
+                                    <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                      visit.patient!.isFirstTime 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-purple-100 text-purple-800'
+                                    }`}>
+                                      {visit.patient!.isFirstTime ? 'First Time' : 'Returning'}
+                                    </span>
+                                    <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                      visit.urgencyLevel === 'high' ? 'bg-red-100 text-red-800' :
+                                      visit.urgencyLevel === 'normal' ? 'bg-orange-100 text-orange-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {visit.urgencyLevel}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => handleViewPatient(visit.patient!, visit)}
+                                    className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                                    title="View Patient Details"
+                                  >
+                                    <FiEye size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleViewPatient(visit.patient!, visit)}
+                                    className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                                    title="Add Prescription"
+                                  >
+                                    <FiFileText size={16} />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          {/* Timer Controls for arrived patients */}
-                          {visit.status === 'arrived' && (
-                            <div className="flex items-center space-x-2 mr-2">
-                              <span className={`text-sm font-mono ${
-                                activeTimer === visit.id ? 'text-orange-600 font-bold' : 'text-gray-600'
-                              }`}>
-                                {formatTime(timerSeconds[visit.id] || 0)}
-                              </span>
-                              {activeTimer === visit.id ? (
-                                <button
-                                  onClick={pauseTimer}
-                                  className="p-1 rounded bg-orange-100 text-orange-600 hover:bg-orange-200"
-                                  title="Pause Timer"
-                                >
-                                  <FiPause size={14} />
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => startTimer(visit.id)}
-                                  className="p-1 rounded bg-green-100 text-green-600 hover:bg-green-200"
-                                  title="Start Timer"
-                                >
-                                  <FiPlay size={14} />
-                                </button>
+                            <div className="mt-3 pt-3 border-t border-blue-200">
+                              <p className="text-sm text-gray-700">
+                                <strong>Symptoms:</strong> {visit.symptoms}
+                              </p>
+                              {visit.notes && (
+                                <p className="text-sm text-gray-700 mt-1">
+                                  <strong>Notes:</strong> {visit.notes}
+                                </p>
                               )}
                             </div>
-                          )}
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={() => handleViewPatient(visit.patient!, visit)}
-                              className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
-                              title="View Patient Details"
-                            >
-                              <FiEye size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleViewPatient(visit.patient!, visit)}
-                              className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
-                              title="Add Prescription"
-                            >
-                              <FiFileText size={16} />
-                            </button>
                           </div>
-                        </div>
-                      </div>
-                      <div className="mt-3 pt-3 border-t border-blue-200">
-                        <p className="text-sm text-gray-700">
-                          <strong>Symptoms:</strong> {visit.symptoms}
-                        </p>
-                        {visit.notes && (
-                          <p className="text-sm text-gray-700 mt-1">
-                            <strong>Notes:</strong> {visit.notes}
-                          </p>
-                        )}
+                        ))}
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Completed Appointments */}
+                  {completedAppointments.length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                        <FiCheckCircle className="mr-2" size={18} />
+                        Completed Appointments ({completedAppointments.length})
+                      </h3>
+                      <div className="space-y-3">
+                        {completedAppointments.map((visit) => (
+                          <div key={visit.id} className="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold mr-4">
+                                  {visit.patient!.firstName[0]}{visit.patient!.lastName[0]}
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-gray-900">
+                                    {visit.patient!.firstName} {visit.patient!.lastName}
+                                  </h3>
+                                  <p className="text-sm text-gray-600">{formatDisplayDate(visit.date)} at {visit.time} • {visit.currentDisease}</p>
+                                  <div className="flex items-center mt-1">
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(visit.status)}`}>
+                                      Completed
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => handleViewPatient(visit.patient!, visit)}
+                                    className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                                    title="View Medical Record"
+                                  >
+                                    <FiFileText size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -810,6 +661,83 @@ export default function DoctorDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Medical Records Section */}
+        {!loading && !error && (
+          <div className="mt-8 hover:scale-105 transition-transform duration-300 fade-in stagger-4">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
+              <div className="flex items-center mb-6">
+                <div className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl mr-3">
+                  <FiFileText className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Medical Records</h2>
+                  <p className="text-sm text-gray-600">Past patient records and prescriptions</p>
+                </div>
+              </div>
+              
+              {medicalHistory.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4">
+                    <FiFileText size={24} />
+                  </div>
+                  <p className="text-sm font-medium">No medical records found</p>
+                  <p className="text-xs text-gray-400 mt-1">Records will appear here after completing appointments</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {medicalHistory.slice(0, 10).map((record) => {
+                    const patient = patients.find(p => p.id === record.patientId)
+                    return (
+                      <div key={record.id} className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center">
+                            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold mr-4">
+                              {patient ? patient.firstName[0] + patient.lastName[0] : 'UN'}
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-gray-900">
+                                {patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown Patient'}
+                              </h3>
+                              <p className="text-sm text-gray-600">{record.date}</p>
+                              <p className="text-sm font-medium text-purple-700 mt-1">{record.diagnosis}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {record.followUpRequired && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Follow-up: {record.followUpDate}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-purple-200">
+                          {record.prescription && (
+                            <p className="text-sm text-gray-700 mb-2">
+                              <strong>Prescription:</strong> {record.prescription}
+                            </p>
+                          )}
+                          {record.notes && (
+                            <p className="text-sm text-gray-700">
+                              <strong>Notes:</strong> {record.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {medicalHistory.length > 10 && (
+                    <div className="text-center pt-4">
+                      <p className="text-sm text-gray-500">
+                        Showing 10 of {medicalHistory.length} records
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
           </>
         )}
       </main>
@@ -822,6 +750,7 @@ export default function DoctorDashboard() {
         visit={selectedVisit}
         medicalHistory={medicalHistory.filter(h => h.patientId === selectedPatient?.id)}
         onSavePrescription={handleSavePrescription}
+        doctor={doctor}
       />
     </div>
   );

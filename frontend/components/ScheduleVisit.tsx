@@ -42,7 +42,7 @@ interface VisitFormData {
   time: string
   symptoms: string
   currentDisease: string
-  urgencyLevel: 'low' | 'normal' | 'high' | 'urgent'
+  urgencyLevel: 'low' | 'medium' | 'high' | 'urgent'
   notes: string
 }
 
@@ -65,7 +65,7 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     time: '',
     symptoms: '',
     currentDisease: '',
-    urgencyLevel: 'normal',
+    urgencyLevel: 'medium',
     notes: ''
   })
   
@@ -73,6 +73,8 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [doctorsLoading, setDoctorsLoading] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
+  const [showValidation, setShowValidation] = useState(false)
 
   // Reset form when modal opens
   useEffect(() => {
@@ -81,12 +83,23 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
         setSelectedPatientId(patient.id)
         setFormData(prev => ({ ...prev, patientId: patient.id }))
       } else {
-        setSelectedPatientId('')
-        setFormData(prev => ({ ...prev, patientId: '' }))
+        // If no patient is pre-selected, default to the first patient in the list or empty
+        const defaultPatientId = patients.length > 0 ? patients[0].id : ''
+        setSelectedPatientId(defaultPatientId)
+        setFormData(prev => ({ ...prev, patientId: defaultPatientId }))
       }
+      setShowValidation(false)
+      setValidationErrors([])
       fetchDoctors()
     }
-  }, [isOpen, patient])
+  }, [isOpen, patient, patients])
+
+  // Update validation errors when form data changes
+  useEffect(() => {
+    if (showValidation) {
+      setValidationErrors(getValidationErrors())
+    }
+  }, [formData, selectedPatientId, showValidation])
 
   // Fetch doctors when modal opens
   const fetchDoctors = async () => {
@@ -96,58 +109,47 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
       setDoctors(response.doctors || [])
     } catch (error) {
       console.error('Error fetching doctors:', error)
-      // Fallback to mock doctors for testing
-      const mockDoctors = [
-        {
-          id: '1',
-          name: 'Dr. John Smith',
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john.smith@hospital.com',
-          specialization: 'Cardiology',
-          license_number: 'MD001',
-          experience_years: 10,
-          consultation_fee: '150.00',
-          is_available: true
-        },
-        {
-          id: '2',
-          name: 'Dr. Sarah Johnson',
-          firstName: 'Sarah',
-          lastName: 'Johnson',
-          email: 'sarah.johnson@hospital.com',
-          specialization: 'Pediatrics',
-          license_number: 'MD002',
-          experience_years: 8,
-          consultation_fee: '120.00',
-          is_available: true
-        },
-        {
-          id: '3',
-          name: 'Dr. Michael Davis',
-          firstName: 'Michael',
-          lastName: 'Davis',
-          email: 'michael.davis@hospital.com',
-          specialization: 'Orthopedics',
-          license_number: 'MD003',
-          experience_years: 12,
-          consultation_fee: '180.00',
-          is_available: true
-        }
-      ]
-      setDoctors(mockDoctors)
     } finally {
       setDoctorsLoading(false)
     }
   }
 
   // Get the currently selected patient
-  const currentPatient = patient || patients.find(p => p.id === selectedPatientId) || null
+  const currentPatient = patient || patients.find(p => p.id === selectedPatientId) || patients.find(p => p.id === formData.patientId) || null
+
+  // Get current validation errors
+  const getValidationErrors = () => {
+    const errors: string[] = []
+    
+    // Check if we have a patient (either passed as prop or selected from dropdown)
+    const hasValidPatient = patient || (selectedPatientId && patients.find(p => p.id === selectedPatientId))
+    
+    if (!hasValidPatient) {
+      errors.push('Please select a patient')
+    }
+    if (!formData.doctorId) {
+      errors.push('Please select a doctor')
+    }
+    if (!formData.date) {
+      errors.push('Please select an appointment date')
+    }
+    if (!formData.time) {
+      errors.push('Please select an appointment time')
+    }
+    if (!formData.symptoms.trim()) {
+      errors.push('Please describe the primary symptoms')
+    }
+    
+    return errors
+  }
 
   // Form validation - check if all required fields are filled
   const isFormValid = () => {
+    // Check if we have a patient (either passed as prop or selected from dropdown)
+    const hasValidPatient = patient || (selectedPatientId && patients.find(p => p.id === selectedPatientId))
+    
     const valid = (
-      currentPatient && // Patient must be selected
+      hasValidPatient && // Patient must be selected
       formData.doctorId && // Doctor must be selected
       formData.date && // Date must be selected
       formData.time && // Time must be selected
@@ -188,14 +190,43 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!currentPatient || !isFormValid()) return
+    
+    // Validate required fields and show specific error messages
+    const hasValidPatient = patient || (selectedPatientId && patients.find(p => p.id === selectedPatientId))
+    if (!hasValidPatient) {
+      alert('Please select a patient')
+      return
+    }
+    
+    if (!formData.doctorId) {
+      alert('Please select a doctor')
+      return
+    }
+    
+    if (!formData.date) {
+      alert('Please select an appointment date')
+      return
+    }
+    
+    if (!formData.time) {
+      alert('Please select an appointment time')
+      return
+    }
+    
+    if (!formData.symptoms.trim()) {
+      alert('Please describe the primary symptoms')
+      return
+    }
     
     setIsLoading(true)
     
     try {
+      // Get the actual patient to use for appointment data
+      const selectedPatient = patient || patients.find(p => p.id === selectedPatientId)
+      
       // Prepare appointment data for backend
       const appointmentData = {
-        patient_id: currentPatient.id,
+        patient_id: selectedPatient!.id,
         doctor_id: formData.doctorId,
         appointment_date: formData.date,
         appointment_time: formData.time,
@@ -203,7 +234,7 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
         reason: formData.currentDisease || formData.symptoms,
         priority: formData.urgencyLevel,
         notes: formData.notes || '',
-        is_first_visit: currentPatient.isFirstTime
+        is_first_visit: selectedPatient!.isFirstTime
       }
 
       console.log('Submitting appointment:', appointmentData)
@@ -228,7 +259,7 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
         time: '',
         symptoms: '',
         currentDisease: '',
-        urgencyLevel: 'normal',
+        urgencyLevel: 'medium',
         notes: ''
       })
       setSelectedPatientId('')
@@ -415,7 +446,7 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="low">Low - Routine appointment</option>
-                <option value="normal">Normal - Standard appointment</option>
+                <option value="medium">Medium - Standard appointment</option>
                 <option value="high">High - Priority appointment</option>
                 <option value="urgent">Urgent - Immediate attention needed</option>
               </select>
@@ -437,6 +468,28 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
             </div>
           </div>
 
+          {/* Validation Errors */}
+          {(showValidation || !isFormValid()) && getValidationErrors().length > 0 && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <div className="flex items-start">
+                <FiAlertCircle className="h-5 w-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
+                <div>
+                  <h3 className="text-sm font-medium text-red-800 mb-2">
+                    Please complete the following required fields:
+                  </h3>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    {getValidationErrors().map((error, index) => (
+                      <li key={index} className="flex items-start">
+                        <span className="inline-block w-1.5 h-1.5 bg-red-600 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                        {error}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Submit Buttons */}
           <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200">
             <button
@@ -449,6 +502,7 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
             <button
               type="submit"
               disabled={isLoading || !isFormValid()}
+              onClick={() => !isFormValid() && setShowValidation(true)}
               className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (

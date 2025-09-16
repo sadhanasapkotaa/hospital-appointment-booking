@@ -93,6 +93,68 @@ def create_appointment(request):
                        status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_appointment_by_staff(request):
+    """Create a new appointment (Staff/Admin only)"""
+    if request.user.user_type not in ['staff', 'admin']:
+        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+
+    print(f"Creating appointment by staff: {request.user.email}")
+    print(f"Request data: {request.data}")
+
+    try:
+        patient_id = request.data.get('patient_id')
+        doctor_id = request.data.get('doctor_id')
+
+        if not patient_id:
+            print("Validation Error: Patient ID is missing")
+            return Response({'error': 'Patient ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+        if not doctor_id:
+            print("Validation Error: Doctor ID is missing")
+            return Response({'error': 'Doctor ID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        print(f"Attempting to find Patient with ID: {patient_id}")
+        patient = Patient.objects.get(pk=patient_id)
+        print(f"Found Patient: {patient.user.username}")
+
+        print(f"Attempting to find Doctor with ID: {doctor_id}")
+        doctor = Doctor.objects.get(pk=doctor_id)
+        print(f"Found Doctor: {doctor.user.username}")
+        
+        # Prepare data for serializer
+        appointment_data = {
+            'patient': patient.pk,
+            'doctor': doctor.pk,
+            'appointment_date': request.data.get('appointment_date'),
+            'appointment_time': request.data.get('appointment_time'),
+            'reason': request.data.get('reason'),
+            'symptoms': request.data.get('symptoms'),
+            'priority': request.data.get('priority'),
+            'notes': request.data.get('notes'),
+            'is_first_visit': request.data.get('is_first_visit', False)
+        }
+        
+        serializer = AppointmentCreateSerializer(data=appointment_data, context={'request': request})
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        print(f"Serializer errors: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    except Patient.DoesNotExist:
+        print(f"Error: Patient with ID {patient_id} not found.")
+        return Response({'error': f'Patient with ID {patient_id} not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Doctor.DoesNotExist:
+        print(f"Error: Doctor with ID {doctor_id} not found.")
+        return Response({'error': f'Doctor with ID {doctor_id} not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 @api_view(['GET', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def appointment_detail(request, appointment_id):
@@ -325,20 +387,25 @@ def doctor_dashboard(request):
             if appointment.patient.user.id not in patient_ids:
                 patient_ids.add(appointment.patient.user.id)
                 patients_data.append({
-                    'id': appointment.patient.user.id,
+                    'id': str(appointment.patient.user.id),  # Convert to string to match visit patientId
                     'firstName': appointment.patient.user.first_name,
                     'lastName': appointment.patient.user.last_name,
                     'email': appointment.patient.user.email,
-                    'phone': appointment.patient.user.phone,
-                    'dateOfBirth': appointment.patient.user.date_of_birth,
+                    'phone': getattr(appointment.patient.user, 'phone', ''),
+                    'dateOfBirth': appointment.patient.user.date_of_birth.strftime('%Y-%m-%d') if appointment.patient.user.date_of_birth else '',
+                    'gender': getattr(appointment.patient.user, 'gender', ''),
+                    'address': getattr(appointment.patient.user, 'address', ''),
+                    'emergencyContact': getattr(appointment.patient, 'emergency_contact', ''),
+                    'emergencyPhone': getattr(appointment.patient, 'emergency_phone', ''),
                     'isFirstTime': not all_appointments.filter(patient=appointment.patient, status='completed').exists(),
                     'bloodGroup': getattr(appointment.patient, 'blood_group', ''),
-                    'emergencyContact': getattr(appointment.patient, 'emergency_contact', ''),
+                    'allergies': getattr(appointment.patient, 'allergies', ''),
+                    'chronicConditions': getattr(appointment.patient, 'chronic_conditions', ''),
                 })
         
-        # Get visits/appointments with patient details
+        # Get visits/appointments with patient details (include all appointments)
         visits_data = []
-        for appointment in today_appointments.select_related('patient__user'):
+        for appointment in all_appointments.select_related('patient__user'):
             visits_data.append({
                 'id': str(appointment.id),
                 'patientId': str(appointment.patient.user.id),
@@ -435,3 +502,45 @@ def update_appointment_status(request, appointment_id):
     except (Appointment.DoesNotExist, Doctor.DoesNotExist):
         return Response({'error': 'Appointment not found'}, 
                        status=status.HTTP_404_NOT_FOUND)
+
+
+# Medical Record Views
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_medical_record(request):
+    """Create a new medical record"""
+    if request.user.user_type != 'doctor':
+        return Response({'error': 'Access denied. Doctor account required.'}, 
+                       status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        doctor = Doctor.objects.get(user=request.user)
+        appointment_id = request.data.get('appointment')
+        
+        # Verify the appointment belongs to this doctor
+        appointment = Appointment.objects.get(id=appointment_id, doctor=doctor)
+        
+        # Create medical record
+        medical_record = MedicalRecord.objects.create(
+            appointment=appointment,
+            diagnosis=request.data.get('diagnosis', ''),
+            prescription=request.data.get('prescription', ''),
+            doctor_notes=request.data.get('doctor_notes', ''),
+            follow_up_date=request.data.get('follow_up_date') if request.data.get('follow_up_date') else None
+        )
+        
+        serializer = MedicalRecordSerializer(medical_record)
+        return Response({
+            'message': 'Medical record created successfully',
+            'medical_record': serializer.data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Doctor.DoesNotExist:
+        return Response({'error': 'Doctor profile not found'}, 
+                       status=status.HTTP_404_NOT_FOUND)
+    except Appointment.DoesNotExist:
+        return Response({'error': 'Appointment not found or access denied'}, 
+                       status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({'error': str(e)}, 
+                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -211,6 +211,19 @@ class APIClient {
     });
   }
 
+  async createMedicalRecord(recordData: {
+    appointment: number;
+    diagnosis: string;
+    prescription: string;
+    doctor_notes: string;
+    follow_up_date?: string | null;
+  }): Promise<any> {
+    return await this.makeRequest('bookings/medical-records/', {
+      method: 'POST',
+      body: JSON.stringify(recordData),
+    });
+  }
+
   // Patient Management Methods
   async addPatient(patientData: {
     firstName: string;

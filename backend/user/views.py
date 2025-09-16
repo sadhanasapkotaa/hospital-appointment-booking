@@ -166,23 +166,10 @@ def get_patients(request):
     
     try:
         patients = Patient.objects.select_related('user').all()
-        patients_data = []
+        patient_data = []
         
         for patient in patients:
-            # Parse medical history for allergies and chronic conditions
-            medical_history = patient.medical_history or ""
-            allergies = ""
-            chronic_conditions = ""
-            
-            if medical_history:
-                lines = medical_history.split('\n')
-                for line in lines:
-                    if line.startswith('Allergies:'):
-                        allergies = line.replace('Allergies:', '').strip()
-                    elif line.startswith('Chronic Conditions:'):
-                        chronic_conditions = line.replace('Chronic Conditions:', '').strip()
-            
-            patients_data.append({
+            patient_data.append({
                 'id': patient.user.id,
                 'firstName': patient.user.first_name,
                 'lastName': patient.user.last_name,
@@ -193,15 +180,11 @@ def get_patients(request):
                 'emergencyContact': '',  # We'll need to add this field to the model
                 'emergencyPhone': patient.emergency_contact or '',
                 'bloodGroup': patient.blood_group or '',
-                'allergies': allergies,
-                'chronicConditions': chronic_conditions,
-                'isFirstTime': True,  # Default for now
-                'gender': ''  # We'll need to add this field to the model
+                'allergies': patient.medical_history,
+                'chronicConditions': patient.medical_history,
             })
         
-        return Response({
-            'patients': patients_data
-        }, status=status.HTTP_200_OK)
+        return Response({'patients': patient_data}, status=status.HTTP_200_OK)
         
     except Exception as e:
         return Response({

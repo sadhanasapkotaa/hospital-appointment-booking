@@ -10,6 +10,9 @@ interface Patient {
   phone: string
   dateOfBirth: string
   gender: string
+  address: string
+  emergencyContact: string
+  emergencyPhone: string
   isFirstTime: boolean
   bloodGroup?: string
   allergies?: string
@@ -19,6 +22,9 @@ interface Patient {
 interface Visit {
   id: string
   patientId: string
+  doctorId: string
+  doctorName: string
+  specialty: string
   date: string
   time: string
   symptoms: string
@@ -56,6 +62,7 @@ interface PatientDetailsModalProps {
   visit: Visit | null
   medicalHistory: MedicalHistory[]
   onSavePrescription: (prescription: any) => void
+  doctor?: { id: number, name: string, specialization: string, email: string } | null
 }
 
 export default function PatientDetailsModal({ 
@@ -64,6 +71,7 @@ export default function PatientDetailsModal({
   patient, 
   visit, 
   medicalHistory, 
+  doctor,
   onSavePrescription 
 }: PatientDetailsModalProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'history' | 'prescription'>('details')
@@ -107,7 +115,7 @@ export default function PatientDetailsModal({
         treatmentNotes,
         followUpRequired,
         followUpDate: followUpRequired ? followUpDate : undefined,
-        doctorName: 'Dr. Sarah Johnson' // This should come from logged in doctor
+        doctorName: doctor?.name || 'Unknown Doctor'
       }
       
       await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
@@ -274,6 +282,17 @@ export default function PatientDetailsModal({
                       <p className="text-sm text-gray-600">Contact</p>
                       <p className="font-medium">{patient.email}</p>
                       <p className="font-medium">{patient.phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Address</p>
+                      <p className="font-medium">{patient.address || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Emergency Contact</p>
+                      <p className="font-medium">{patient.emergencyContact || 'Not provided'}</p>
+                      {patient.emergencyPhone && (
+                        <p className="font-medium text-sm text-gray-600">{patient.emergencyPhone}</p>
+                      )}
                     </div>
                     <div>
                       <p className="text-sm text-gray-600">Patient Type</p>

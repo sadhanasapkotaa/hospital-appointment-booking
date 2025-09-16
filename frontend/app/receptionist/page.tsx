@@ -39,70 +39,7 @@ interface Visit {
   status: 'scheduled' | 'arrived' | 'in_progress' | 'completed' | 'cancelled'
 }
 
-// Initial mock data
-const initialPatients: Patient[] = [
-  {
-    id: 'patient_1',
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@email.com',
-    phone: '+1-555-0123',
-    dateOfBirth: '1985-06-15',
-    gender: 'male',
-    address: '123 Main St, City, State 12345',
-    emergencyContact: 'Jane Doe',
-    emergencyPhone: '+1-555-0124',
-    isFirstTime: false,
-    bloodGroup: 'A+',
-    allergies: 'Penicillin',
-    chronicConditions: 'Hypertension'
-  },
-  {
-    id: 'patient_2',
-    firstName: 'Jane',
-    lastName: 'Smith',
-    email: 'jane.smith@email.com',
-    phone: '+1-555-0125',
-    dateOfBirth: '1990-03-22',
-    gender: 'female',
-    address: '456 Oak Ave, City, State 12345',
-    emergencyContact: 'Robert Smith',
-    emergencyPhone: '+1-555-0126',
-    isFirstTime: true,
-    bloodGroup: 'O-',
-    allergies: 'None',
-    chronicConditions: 'None'
-  }
-]
 
-const initialVisits: Visit[] = [
-  {
-    id: 'visit_1',
-    patientId: 'patient_1',
-    doctorId: 'dr1',
-    doctorName: 'Dr. Sarah Johnson',
-    specialty: 'Cardiology',
-    date: '2025-09-01',
-    time: '10:00',
-    symptoms: 'Chest pain, shortness of breath',
-    currentDisease: 'Regular checkup',
-    urgencyLevel: 'normal',
-    status: 'scheduled'
-  },
-  {
-    id: 'visit_2',
-    patientId: 'patient_2',
-    doctorId: 'dr2',
-    doctorName: 'Dr. Michael Chen',
-    specialty: 'Dermatology',
-    date: '2025-09-02',
-    time: '14:00',
-    symptoms: 'Skin rash, itching',
-    currentDisease: 'Skin consultation',
-    urgencyLevel: 'normal',
-    status: 'scheduled'
-  }
-]
 
 export default function ReceptionistDashboard() {
   const router = useRouter()
@@ -144,8 +81,6 @@ export default function ReceptionistDashboard() {
     } catch (err: any) {
       console.error('Error fetching patients:', err)
       setError('Failed to load patients')
-      // Fallback to initial mock data if API fails
-      setPatients(initialPatients)
     } finally {
       setIsLoading(false)
     }
@@ -155,18 +90,27 @@ export default function ReceptionistDashboard() {
       setIsAppointmentsLoading(true)
       const appointmentsResponse = await apiClient.getAppointments()
       
-      // Convert backend appointment format to frontend visit format
-      const appointmentsData = Array.isArray(appointmentsResponse) ? appointmentsResponse : appointmentsResponse.appointments || []
+      // Handle both array and object responses
+      let appointmentsData = []
+      if (Array.isArray(appointmentsResponse)) {
+        appointmentsData = appointmentsResponse
+      } else if (appointmentsResponse && appointmentsResponse.appointments) {
+        appointmentsData = appointmentsResponse.appointments
+      } else if (appointmentsResponse && typeof appointmentsResponse === 'object') {
+        // If it's a single appointment object, wrap it in an array
+        appointmentsData = [appointmentsResponse]
+      }
+      
       const visitsData = appointmentsData.map((appointment: any) => ({
         id: appointment.id.toString(),
-        patientId: appointment.patient.toString(),
-        doctorId: appointment.doctor.toString(),
+        patientId: appointment.patient ? appointment.patient.toString() : appointment.patient_id ? appointment.patient_id.toString() : '',
+        doctorId: appointment.doctor ? appointment.doctor.toString() : appointment.doctor_id ? appointment.doctor_id.toString() : '',
         doctorName: appointment.doctor_name || 'Dr. Unknown',
-        specialty: appointment.specialty || 'General',
+        specialty: appointment.doctor_specialization || appointment.specialty || 'General',
         date: appointment.appointment_date,
         time: appointment.appointment_time,
         symptoms: appointment.symptoms || appointment.reason || '',
-        currentDisease: appointment.reason || '',
+        currentDisease: appointment.reason || appointment.symptoms || '',
         urgencyLevel: appointment.priority || 'normal',
         notes: appointment.notes || '',
         status: appointment.status || 'scheduled'
@@ -177,8 +121,6 @@ export default function ReceptionistDashboard() {
     } catch (err: any) {
       console.error('Error fetching appointments:', err)
       setAppointmentsError('Failed to load appointments')
-      // Fallback to initial mock data if API fails
-      setVisits(initialVisits)
     } finally {
       setIsAppointmentsLoading(false)
     }
@@ -190,10 +132,6 @@ export default function ReceptionistDashboard() {
 
   const handleAddPatient = (newPatient: Patient) => {
     setPatients([...patients, newPatient])
-  }
-
-  const handleAssignVisit = (newVisit: Visit) => {
-    setVisits([...visits, newVisit])
   }
 
   const handleAssignVisitClick = (patient: Patient) => {
@@ -218,16 +156,42 @@ export default function ReceptionistDashboard() {
   }
 
   const handleCancelVisit = (visitId: string) => {
-    setVisits(visits.map(v => 
+    setVisits(visits.map(v =>
       v.id === visitId ? { ...v, status: 'cancelled' as const } : v
     ))
   }
 
   // Get visit data with patient information
   const visitsWithPatients = visits.map(visit => {
-    const patient = patients.find(p => p.id === visit.patientId)
+    // Try to match patient by various ID formats
+    let patient = patients.find(p => p.id === visit.patientId)
+    if (!patient) {
+      patient = patients.find(p => p.id.toString() === visit.patientId.toString())
+    }
+    
+
+    
+    // If no patient found, create a placeholder to still show the appointment
+    if (!patient && visit.patientId) {
+      patient = {
+        id: visit.patientId,
+        firstName: 'Unknown',
+        lastName: 'Patient',
+        email: 'unknown@email.com',
+        phone: 'N/A',
+        dateOfBirth: '',
+        gender: '',
+        address: '',
+        emergencyContact: '',
+        emergencyPhone: '',
+        isFirstTime: false
+      }
+    }
+    
     return { ...visit, patient }
   }).filter(visit => visit.patient) // Only include visits with valid patients
+  
+  console.log('Visits with patients:', visitsWithPatients.length, 'out of', visits.length, 'visits') // Debug log
 
   // Filter visits based on search and filters
   const filteredVisits = visitsWithPatients.filter(visit => {
@@ -469,6 +433,8 @@ export default function ReceptionistDashboard() {
           </div>
         </div>
 
+
+
         {/* Appointment Management */}
         <div className="hover:scale-105 transition-transform duration-300 fade-in stagger-2">
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
@@ -524,21 +490,40 @@ export default function ReceptionistDashboard() {
               </div>
             </div>
 
+            {/* Loading and Error States */}
+            {isAppointmentsLoading && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mb-4"></div>
+                <p className="text-sm text-gray-600">Loading appointments...</p>
+              </div>
+            )}
+
+            {appointmentsError && !isAppointmentsLoading && (
+              <div className="flex flex-col items-center justify-center py-12 text-red-500">
+                <div className="w-16 h-16 bg-gradient-to-r from-red-100 to-red-200 rounded-full flex items-center justify-center mb-4">
+                  <FiCalendar size={24} />
+                </div>
+                <p className="text-sm font-medium">{appointmentsError}</p>
+                <p className="text-xs text-red-400 mt-1">Please try again later</p>
+              </div>
+            )}
+
             {/* Table */}
-            <div className="overflow-x-auto rounded-xl">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Doctor</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Specialty</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Date & Time</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Condition</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
+            {!isAppointmentsLoading && !appointmentsError && (
+              <div className="overflow-x-auto rounded-xl">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Patient</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Doctor</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Specialty</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Date & Time</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Status</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Condition</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
                   {filteredVisits.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="px-6 py-12 text-center">
@@ -638,6 +623,7 @@ export default function ReceptionistDashboard() {
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </div>
       </main>
