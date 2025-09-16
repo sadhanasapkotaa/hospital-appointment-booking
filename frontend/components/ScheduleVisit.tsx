@@ -31,6 +31,7 @@ interface ScheduleVisitProps {
   patient?: Patient | null
   patients?: Patient[]
   onSuccess?: () => void
+  existingAppointments?: any[] // Add existing appointments to check conflicts
 }
 
 interface VisitFormData {
@@ -55,7 +56,7 @@ const timeSlots = [
   '16:00', '16:15', '16:30', '16:45'
 ]
 
-export default function ScheduleVisit({ isOpen, onClose, patient, patients = [], onSuccess }: ScheduleVisitProps) {
+export default function ScheduleVisit({ isOpen, onClose, patient, patients = [], onSuccess, existingAppointments = [] }: ScheduleVisitProps) {
   const [formData, setFormData] = useState<VisitFormData>({
     patientId: '',
     doctorId: '',
@@ -79,20 +80,26 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
+      console.log('ScheduleVisit modal opened with:', { 
+        patients: patients.length, 
+        existingAppointments: existingAppointments.length 
+      })
+      console.log('Sample existing appointment:', existingAppointments[0])
+      
       if (patient) {
-        setSelectedPatientId(patient.id)
+        setSelectedPatientId(String(patient.id))
         setFormData(prev => ({ ...prev, patientId: patient.id }))
       } else {
         // If no patient is pre-selected, default to the first patient in the list or empty
-        const defaultPatientId = patients.length > 0 ? patients[0].id : ''
+        const defaultPatientId = patients.length > 0 ? String(patients[0].id) : ''
         setSelectedPatientId(defaultPatientId)
-        setFormData(prev => ({ ...prev, patientId: defaultPatientId }))
+        setFormData(prev => ({ ...prev, patientId: patients.length > 0 ? patients[0].id : '' }))
       }
       setShowValidation(false)
       setValidationErrors([])
       fetchDoctors()
     }
-  }, [isOpen, patient, patients])
+  }, [isOpen, patient, patients, existingAppointments])
 
   // Update validation errors when form data changes
   useEffect(() => {
@@ -115,14 +122,39 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
   }
 
   // Get the currently selected patient
-  const currentPatient = patient || patients.find(p => p.id === selectedPatientId) || patients.find(p => p.id === formData.patientId) || null
+  const currentPatient = patient || 
+    patients.find(p => String(p.id) === String(selectedPatientId)) || 
+    patients.find(p => String(p.id) === String(formData.patientId)) || null
+
+  // Check if time slot is already booked
+  const isTimeSlotBooked = (doctorId: string, date: string, time: string) => {
+    console.log('Checking time slot conflict for:', { doctorId, date, time })
+    console.log('Existing appointments:', existingAppointments)
+    
+    const conflictingAppointment = existingAppointments.find(appointment => {
+      const matches = appointment.doctorId === doctorId && 
+                     appointment.date === date && 
+                     appointment.time === time &&
+                     !['cancelled', 'no_show'].includes(appointment.status)
+      
+      if (matches) {
+        console.log('Found conflicting appointment:', appointment)
+      }
+      
+      return matches
+    })
+    
+    return !!conflictingAppointment
+  }
 
   // Get current validation errors
   const getValidationErrors = () => {
     const errors: string[] = []
     
     // Check if we have a patient (either passed as prop or selected from dropdown)
-    const hasValidPatient = patient || (selectedPatientId && patients.find(p => p.id === selectedPatientId))
+    const hasValidPatient = patient || (selectedPatientId && patients.find(p => 
+      String(p.id) === String(selectedPatientId)
+    ))
     
     if (!hasValidPatient) {
       errors.push('Please select a patient')
@@ -135,6 +167,11 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     }
     if (!formData.time) {
       errors.push('Please select an appointment time')
+    } else if (formData.doctorId && formData.date && formData.time) {
+      // Check for time slot conflicts
+      if (isTimeSlotBooked(formData.doctorId, formData.date, formData.time)) {
+        errors.push('This time slot is already booked for the selected doctor')
+      }
     }
     if (!formData.symptoms.trim()) {
       errors.push('Please describe the primary symptoms')
@@ -146,7 +183,9 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
   // Form validation - check if all required fields are filled
   const isFormValid = () => {
     // Check if we have a patient (either passed as prop or selected from dropdown)
-    const hasValidPatient = patient || (selectedPatientId && patients.find(p => p.id === selectedPatientId))
+    const hasValidPatient = patient || (selectedPatientId && patients.find(p => 
+      String(p.id) === String(selectedPatientId)
+    ))
     
     const valid = (
       hasValidPatient && // Patient must be selected
@@ -191,9 +230,27 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    // Debug logging
+    console.log('Form submission validation:', {
+      patient,
+      selectedPatientId,
+      patients: patients.length,
+      foundPatient: patients.find(p => p.id === selectedPatientId),
+      formDataPatientId: formData.patientId
+    })
+    
     // Validate required fields and show specific error messages
-    const hasValidPatient = patient || (selectedPatientId && patients.find(p => p.id === selectedPatientId))
+    const numericSelectedPatientId = selectedPatientId ? parseInt(selectedPatientId, 10) : null
+    const hasValidPatient = patient || (selectedPatientId && patients.find(p => 
+      p.id === selectedPatientId || p.id === numericSelectedPatientId
+    ))
     if (!hasValidPatient) {
+      console.error('Patient validation failed:', {
+        patient,
+        selectedPatientId,
+        numericSelectedPatientId,
+        patients: patients.map(p => ({ id: p.id, name: `${p.firstName} ${p.lastName}` }))
+      })
       alert('Please select a patient')
       return
     }
@@ -213,6 +270,12 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
       return
     }
     
+    // Check for time slot conflicts
+    if (isTimeSlotBooked(formData.doctorId, formData.date, formData.time)) {
+      alert('This time slot is already booked for the selected doctor. Please choose a different time.')
+      return
+    }
+    
     if (!formData.symptoms.trim()) {
       alert('Please describe the primary symptoms')
       return
@@ -222,7 +285,10 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     
     try {
       // Get the actual patient to use for appointment data
-      const selectedPatient = patient || patients.find(p => p.id === selectedPatientId)
+      const numericSelectedPatientId = selectedPatientId ? parseInt(selectedPatientId, 10) : null
+      const selectedPatient = patient || patients.find(p => 
+        p.id === selectedPatientId || p.id === numericSelectedPatientId
+      )
       
       // Prepare appointment data for backend
       const appointmentData = {
@@ -386,20 +452,59 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
                   <FiClock className="inline h-4 w-4 mr-1" />
                   Appointment Time *
                 </label>
-                <select
-                  name="time"
-                  value={formData.time}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Select time</option>
-                  {timeSlots.map(time => (
-                    <option key={time} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                </select>
+                {formData.doctorId && formData.date ? (
+                  <>
+                    {/* Color Legend */}
+                    <div className="flex items-center space-x-4 mb-3 text-xs text-gray-600">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 bg-white border border-gray-300 rounded mr-1"></div>
+                        <span>Available</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 bg-blue-500 rounded mr-1"></div>
+                        <span>Selected</span>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 bg-red-100 border border-red-300 rounded mr-1"></div>
+                        <span>Booked</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                    {timeSlots.map(time => {
+                      const isBooked = isTimeSlotBooked(formData.doctorId, formData.date, time)
+                      const isSelected = formData.time === time
+                      
+                      // Debug logging for each time slot
+                      if (formData.doctorId && formData.date) {
+                        console.log(`Time slot ${time}:`, { isBooked, isSelected })
+                      }
+                      
+                      return (
+                        <button
+                          key={time}
+                          type="button"
+                          onClick={() => !isBooked && setFormData(prev => ({ ...prev, time }))}
+                          disabled={isBooked}
+                          className={`p-2 text-sm rounded-lg border transition-all font-medium ${
+                            isSelected 
+                              ? 'bg-blue-500 text-white border-blue-500 shadow-md' 
+                              : isBooked 
+                                ? 'bg-red-200 text-red-700 border-red-400 cursor-not-allowed opacity-80 line-through' 
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50 hover:border-blue-300 hover:shadow-sm active:bg-blue-100'
+                          }`}
+                        >
+                          {time}
+                          {isBooked && <div className="text-xs text-red-500 font-medium">Booked</div>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  </>
+                ) : (
+                  <div className="p-4 bg-gray-100 rounded-xl text-center text-gray-500">
+                    Please select a doctor and date first to see available time slots
+                  </div>
+                )}
               </div>
             </div>
 

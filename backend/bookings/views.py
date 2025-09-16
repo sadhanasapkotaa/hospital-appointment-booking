@@ -124,8 +124,8 @@ def create_appointment_by_staff(request):
         
         # Prepare data for serializer
         appointment_data = {
-            'patient': patient.pk,
-            'doctor': doctor.pk,
+            'patient': patient.pk,  # Patient instance primary key (which is user.id for OneToOneField)
+            'doctor': doctor.pk,    # Doctor instance primary key (which is user.id for OneToOneField)
             'appointment_date': request.data.get('appointment_date'),
             'appointment_time': request.data.get('appointment_time'),
             'reason': request.data.get('reason'),

@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import { FaUser, FaClock, FaCalendarCheck, FaStethoscope, FaPlay, FaPause, FaStop } from 'react-icons/fa'
-import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiLogOut, FiActivity, FiHeart, FiEye, FiFileText, FiPlay, FiPause, FiUserCheck } from "react-icons/fi"
+import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiLogOut, FiActivity, FiHeart, FiEye, FiFileText, FiPlay, FiPause, FiUserCheck, FiSquare } from "react-icons/fi"
 import PatientDetailsModal from '@/components/PatientDetailsModal'
 import { apiClient, authHelpers } from '../api/api'
 import { useRouter } from 'next/navigation'
@@ -73,6 +73,7 @@ export default function DoctorDashboard() {
   const [activeTimer, setActiveTimer] = useState<string | null>(null)
   const [timerSeconds, setTimerSeconds] = useState<{[key: string]: number}>({})
   const [showTimeAlert, setShowTimeAlert] = useState<string | null>(null)
+  const [autoStartedTimers, setAutoStartedTimers] = useState<Set<string>>(new Set())
 
   // Logout handler
   const handleLogout = async () => {
@@ -134,6 +135,13 @@ export default function DoctorDashboard() {
     }
 
     fetchDashboardData()
+    
+    // Set up polling for real-time updates every 30 seconds
+    const interval = setInterval(() => {
+      fetchDashboardData()
+    }, 30000) // Poll every 30 seconds
+    
+    return () => clearInterval(interval)
   }, [])
 
   const handleViewPatient = (patient: Patient, visit: Visit) => {
@@ -221,6 +229,30 @@ export default function DoctorDashboard() {
     setShowTimeAlert(null)
   }
 
+  // Auto-start timer when appointment status changes to "arrived"
+  useEffect(() => {
+    visits.forEach(visit => {
+      if (visit.status === 'arrived' && !activeTimer && !timerSeconds[visit.id] && !autoStartedTimers.has(visit.id)) {
+        console.log(`Auto-starting timer for arrived patient: ${visit.id}`)
+        setActiveTimer(visit.id)
+        setTimerSeconds(prev => ({ ...prev, [visit.id]: 0 }))
+        setAutoStartedTimers(prev => new Set(prev).add(visit.id))
+        
+        // Show auto-start notification
+        const patient = patients.find(p => p.id === visit.patientId)
+        const patientName = patient ? `${patient.firstName} ${patient.lastName}` : 'Patient'
+        alert(`Timer automatically started for ${patientName} (15 minutes)`)
+        
+        // Also mark as in_progress
+        setVisits(prevVisits => 
+          prevVisits.map(v => 
+            v.id === visit.id ? { ...v, status: 'in_progress' as const } : v
+          )
+        )
+      }
+    })
+  }, [visits, activeTimer, timerSeconds, autoStartedTimers, patients])
+
   // Timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -251,6 +283,19 @@ export default function DoctorDashboard() {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Format countdown timer (15 minutes = 900 seconds)
+  const formatCountdown = (seconds: number) => {
+    const remainingSeconds = Math.max(0, 900 - seconds) // 15 minutes countdown
+    const mins = Math.floor(remainingSeconds / 60)
+    const secs = remainingSeconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Get progress percentage for timer
+  const getTimerProgress = (seconds: number) => {
+    return Math.min((seconds / 900) * 100, 100) // 900 seconds = 15 minutes
   }
 
   // Function to get status color classes
@@ -443,12 +488,21 @@ export default function DoctorDashboard() {
 
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-3">
             <div className="flex items-center">
-              <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg">
-                <FiUserCheck className="h-6 w-6 text-white" />
+              <div className={`p-3 rounded-xl shadow-lg ${
+                activeTimer ? 'bg-gradient-to-r from-orange-500 to-orange-600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-blue-600'
+              }`}>
+                {activeTimer ? <FiClock className="h-6 w-6 text-white" /> : <FiUserCheck className="h-6 w-6 text-white" />}
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending Today</p>
-                <p className="text-2xl font-bold text-gray-900">{waitingRoomCount}</p>
+                <p className="text-sm font-medium text-gray-600">
+                  {activeTimer ? 'Timer Active' : 'Pending Today'}
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {activeTimer ? formatCountdown(timerSeconds[activeTimer] || 0) : waitingRoomCount}
+                </p>
+                {activeTimer && (
+                  <p className="text-xs text-orange-600 font-medium">Time Remaining</p>
+                )}
               </div>
             </div>
           </div>
@@ -466,12 +520,109 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
+        {/* Active Timer Display - Always visible at top */}
+        {activeTimer && (
+          <div className="mb-6 p-6 bg-gradient-to-r from-blue-100 to-indigo-100 border-2 border-blue-300 rounded-xl shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex flex-col items-center">
+                  <div className={`relative w-24 h-24 ${
+                    (timerSeconds[activeTimer] || 0) >= 780 ? 'animate-pulse' : ''
+                  }`}>
+                    <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 96 96">
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="42"
+                        stroke="#e5e7eb"
+                        strokeWidth="6"
+                        fill="none"
+                      />
+                      <circle
+                        cx="48"
+                        cy="48"
+                        r="42"
+                        stroke={
+                          getTimerProgress(timerSeconds[activeTimer] || 0) >= 100 ? "#dc2626" : 
+                          (timerSeconds[activeTimer] || 0) >= 780 ? "#f59e0b" : "#3b82f6"
+                        }
+                        strokeWidth="6"
+                        fill="none"
+                        strokeDasharray={`${2 * Math.PI * 42}`}
+                        strokeDashoffset={`${2 * Math.PI * 42 * (1 - getTimerProgress(timerSeconds[activeTimer] || 0) / 100)}`}
+                        className="transition-all duration-500"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className={`text-lg font-bold ${
+                        getTimerProgress(timerSeconds[activeTimer] || 0) >= 100 ? 'text-red-600' : 
+                        (timerSeconds[activeTimer] || 0) >= 780 ? 'text-yellow-600' : 'text-blue-600'
+                      }`}>
+                        {formatCountdown(timerSeconds[activeTimer] || 0)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600 font-medium mt-2">
+                    {getTimerProgress(timerSeconds[activeTimer] || 0) >= 100 ? 'TIME UP!' : 'Time Remaining'}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">Active Consultation Timer</h3>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Patient: {(() => {
+                      const activeVisit = visits.find(v => v.id === activeTimer)
+                      const patient = activeVisit ? patients.find(p => p.id === activeVisit.patientId) : null
+                      return patient ? `${patient.firstName} ${patient.lastName}` : 'Unknown'
+                    })()}
+                  </p>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => pauseTimer()}
+                      className="px-3 py-1 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-colors text-sm font-medium"
+                    >
+                      <FiPause className="inline mr-1" size={14} />
+                      Pause
+                    </button>
+                    <button
+                      onClick={() => resetTimer(activeTimer)}
+                      className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+                    >
+                      <FiSquare className="inline mr-1" size={14} />
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatTime(timerSeconds[activeTimer] || 0)}
+                </div>
+                <div className="text-sm text-gray-500">Elapsed Time</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Time Alert */}
         {showTimeAlert && (
-          <div className="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg text-red-800 fade-in">
-            <div className="flex items-center">
-              <FiClock className="mr-2" />
-              <span className="font-medium">15 minutes completed for current consultation!</span>
+          <div className="mb-6 p-4 bg-gradient-to-r from-red-100 to-red-200 border-2 border-red-300 rounded-xl text-red-800 fade-in shadow-lg animate-pulse">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="p-2 bg-red-500 rounded-full mr-3">
+                  <FiClock className="text-white" size={20} />
+                </div>
+                <div>
+                  <span className="font-bold text-lg">⏰ 15 Minutes Completed!</span>
+                  <p className="text-sm text-red-700 mt-1">Current consultation time has reached the standard 15-minute duration.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTimeAlert(null)}
+                className="p-2 bg-red-200 hover:bg-red-300 rounded-lg transition-colors"
+                title="Dismiss"
+              >
+                ✕
+              </button>
             </div>
           </div>
         )}
@@ -501,6 +652,145 @@ export default function DoctorDashboard() {
                 </div>
               ) : (
                 <div className="space-y-6">
+                  {/* Active Consultations (Arrived/In Progress) */}
+                  {todayVisitsWithPatients.filter(v => ['arrived', 'in_progress'].includes(v.status)).length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                        <FiActivity className="mr-2 text-orange-600" size={18} />
+                        Active Consultations ({todayVisitsWithPatients.filter(v => ['arrived', 'in_progress'].includes(v.status)).length})
+                      </h3>
+                      <div className="space-y-3">
+                        {todayVisitsWithPatients.filter(v => ['arrived', 'in_progress'].includes(v.status)).map((visit) => (
+                          <div key={visit.id} className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-4 border-2 border-orange-200 shadow-lg">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white font-semibold mr-4">
+                                  {visit.patient!.firstName[0]}{visit.patient!.lastName[0]}
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-gray-900">
+                                    {visit.patient!.firstName} {visit.patient!.lastName}
+                                  </h3>
+                                  <p className="text-sm text-gray-600">{formatDisplayDate(visit.date)} at {visit.time} • {visit.currentDisease}</p>
+                                  <div className="flex items-center mt-1">
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(visit.status)}`}>
+                                      {visit.status === 'arrived' ? 'Patient Arrived' : 'In Progress'}
+                                    </span>
+                                    <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                      visit.urgencyLevel === 'high' ? 'bg-red-100 text-red-800' :
+                                      visit.urgencyLevel === 'normal' ? 'bg-orange-100 text-orange-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {visit.urgencyLevel}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-4">
+                                {/* Large Timer Display */}
+                                <div className="flex flex-col items-center bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-orange-200">
+                                  <div className={`relative w-20 h-20 mb-2 ${
+                                    (timerSeconds[visit.id] || 0) >= 780 ? 'animate-pulse' : '' // Start pulsing at 13 minutes (780 seconds)
+                                  }`}>
+                                    {/* Circular Progress */}
+                                    <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 80 80">
+                                      <circle
+                                        cx="40"
+                                        cy="40"
+                                        r="35"
+                                        stroke="#fed7aa"
+                                        strokeWidth="6"
+                                        fill="none"
+                                      />
+                                      <circle
+                                        cx="40"
+                                        cy="40"
+                                        r="35"
+                                        stroke={
+                                          getTimerProgress(timerSeconds[visit.id] || 0) >= 100 ? "#dc2626" : 
+                                          (timerSeconds[visit.id] || 0) >= 780 ? "#f59e0b" : "#ea580c"
+                                        }
+                                        strokeWidth="6"
+                                        fill="none"
+                                        strokeDasharray={`${2 * Math.PI * 35}`}
+                                        strokeDashoffset={`${2 * Math.PI * 35 * (1 - getTimerProgress(timerSeconds[visit.id] || 0) / 100)}`}
+                                        className="transition-all duration-500"
+                                      />
+                                    </svg>
+                                    {/* Timer Text */}
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <span className={`text-sm font-bold ${
+                                        getTimerProgress(timerSeconds[visit.id] || 0) >= 100 ? 'text-red-600' : 'text-orange-600'
+                                      }`}>
+                                        {formatCountdown(timerSeconds[visit.id] || 0)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-gray-600 font-medium">
+                                    {getTimerProgress(timerSeconds[visit.id] || 0) >= 100 ? 'TIME UP!' : 'Time Remaining'}
+                                  </div>
+                                  <div className="flex items-center mt-2 space-x-1">
+                                    {activeTimer === visit.id ? (
+                                      <button
+                                        onClick={() => pauseTimer()}
+                                        className="p-1 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-colors"
+                                        title="Pause Timer"
+                                      >
+                                        <FiPause size={14} />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => startTimer(visit.id)}
+                                        className="p-1 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                                        title="Resume Timer"
+                                      >
+                                        <FiPlay size={14} />
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => resetTimer(visit.id)}
+                                      className="p-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                                      title="Reset Timer"
+                                    >
+                                      <FiSquare size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex flex-col space-y-2">
+                                  <button
+                                    onClick={() => handleViewPatient(visit.patient!, visit)}
+                                    className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
+                                    title="View Patient Details"
+                                  >
+                                    <FiEye size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleViewPatient(visit.patient!, visit)}
+                                    className="p-2 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                                    title="Add Prescription"
+                                  >
+                                    <FiFileText size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="mt-3 pt-3 border-t border-orange-200">
+                              <p className="text-sm text-gray-700">
+                                <strong>Symptoms:</strong> {visit.symptoms}
+                              </p>
+                              {visit.notes && (
+                                <p className="text-sm text-gray-700 mt-1">
+                                  <strong>Notes:</strong> {visit.notes}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Pending Appointments */}
                   {pendingAppointments.length > 0 && (
                     <div>
@@ -543,6 +833,85 @@ export default function DoctorDashboard() {
                                 </div>
                               </div>
                               <div className="flex items-center space-x-3">
+                                {/* Timer Display - Always show timer controls */}
+                                <div className="flex flex-col items-center">
+                                  {(activeTimer === visit.id || timerSeconds[visit.id] > 0) ? (
+                                    <div className="flex flex-col items-center">
+                                    <div className="relative w-16 h-16">
+                                      {/* Circular Progress */}
+                                      <svg className="w-16 h-16 transform -rotate-90" viewBox="0 0 64 64">
+                                        <circle
+                                          cx="32"
+                                          cy="32"
+                                          r="28"
+                                          stroke="#e5e7eb"
+                                          strokeWidth="4"
+                                          fill="none"
+                                        />
+                                        <circle
+                                          cx="32"
+                                          cy="32"
+                                          r="28"
+                                          stroke={getTimerProgress(timerSeconds[visit.id] || 0) >= 100 ? "#ef4444" : "#3b82f6"}
+                                          strokeWidth="4"
+                                          fill="none"
+                                          strokeDasharray={`${2 * Math.PI * 28}`}
+                                          strokeDashoffset={`${2 * Math.PI * 28 * (1 - getTimerProgress(timerSeconds[visit.id] || 0) / 100)}`}
+                                          className="transition-all duration-300"
+                                        />
+                                      </svg>
+                                      {/* Timer Text */}
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className={`text-xs font-bold ${
+                                          getTimerProgress(timerSeconds[visit.id] || 0) >= 100 ? 'text-red-600' : 'text-blue-600'
+                                        }`}>
+                                          {formatCountdown(timerSeconds[visit.id] || 0)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center mt-2 space-x-1">
+                                      {activeTimer === visit.id ? (
+                                        <button
+                                          onClick={() => pauseTimer()}
+                                          className="p-1 bg-orange-100 text-orange-600 rounded-lg hover:bg-orange-200 transition-colors"
+                                          title="Pause Timer"
+                                        >
+                                          <FiPause size={12} />
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => startTimer(visit.id)}
+                                          className="p-1 bg-green-100 text-green-600 rounded-lg hover:bg-green-200 transition-colors"
+                                          title="Start Timer"
+                                        >
+                                          <FiPlay size={12} />
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => resetTimer(visit.id)}
+                                        className="p-1 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
+                                        title="Reset Timer"
+                                      >
+                                        <FiSquare size={12} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                  ) : (
+                                    // Show prominent timer button when not active
+                                    <div className="flex flex-col items-center bg-orange-50 rounded-xl p-3 border border-orange-200">
+                                      <button
+                                        onClick={() => startTimer(visit.id)}
+                                        className="p-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 hover:scale-105 shadow-lg mb-2"
+                                        title="Start 15-minute Timer"
+                                      >
+                                        <FiPlay size={20} />
+                                      </button>
+                                      <span className="text-xs font-medium text-orange-700">Start Timer</span>
+                                      <span className="text-xs text-orange-600">(15 min)</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
                                 <div className="flex space-x-2">
                                   <button
                                     onClick={() => handleViewPatient(visit.patient!, visit)}

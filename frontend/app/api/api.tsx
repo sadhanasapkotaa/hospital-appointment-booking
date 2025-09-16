@@ -1,5 +1,7 @@
 // API Configuration and Services
-const API_BASE_URL = 'https://friendly-space-trout-xq5jrxgp446hprw-8000.app.github.dev/api/';
+const API_BASE_URL = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:8000/api/' 
+  : 'https://friendly-space-trout-xq5jrxgp446hprw-8000.app.github.dev/api/';
 
 // Types
 export interface User {
