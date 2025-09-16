@@ -149,10 +149,21 @@ export default function ReceptionistDashboard() {
     ))
   }
 
-  const handleMarkAsArrived = (visitId: string) => {
-    setVisits(visits.map(v => 
-      v.id === visitId ? { ...v, status: 'arrived' as const } : v
-    ))
+  const handleMarkAsArrived = async (visitId: string) => {
+    try {
+      // Update status in backend
+      await apiClient.updateAppointmentStatus(parseInt(visitId), 'arrived', 'Patient has arrived')
+      
+      // Update local state
+      setVisits(visits.map(v => 
+        v.id === visitId ? { ...v, status: 'arrived' as const } : v
+      ))
+      
+      console.log(`Patient marked as arrived: ${visitId}`)
+    } catch (error) {
+      console.error('Error marking patient as arrived:', error)
+      alert('Failed to update patient status')
+    }
   }
 
   const handleCancelVisit = (visitId: string) => {
@@ -639,8 +650,9 @@ export default function ReceptionistDashboard() {
       <ScheduleVisit
         isOpen={isScheduleVisitModalOpen}
         onClose={() => setIsScheduleVisitModalOpen(false)}
-        patient={selectedPatient}
+        patient={null} // Always allow patient selection
         patients={patients} // Pass all patients for selection
+        existingAppointments={visits} // Pass existing appointments for conflict checking
         onSuccess={fetchData} // Refresh data after successful appointment creation
       />
     </div>
