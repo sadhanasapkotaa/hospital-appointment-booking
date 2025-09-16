@@ -152,7 +152,9 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     const errors: string[] = []
     
     // Check if we have a patient (either passed as prop or selected from dropdown)
-    const hasValidPatient = patient || (selectedPatientId && patients.find(p => p.id === selectedPatientId))
+    const hasValidPatient = patient || (selectedPatientId && patients.find(p => 
+      String(p.id) === String(selectedPatientId)
+    ))
     
     if (!hasValidPatient) {
       errors.push('Please select a patient')
