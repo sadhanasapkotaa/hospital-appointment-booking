@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { FiX, FiCalendar, FiClock, FiUser, FiFileText, FiAlertCircle } from 'react-icons/fi'
+import { FiX, FiCalendar, FiClock, FiUser, FiFileText, FiAlertCircle, FiChevronDown, FiCheck } from 'react-icons/fi'
 import { apiClient } from '../app/api/api'
 
 interface Patient {
@@ -34,7 +34,7 @@ interface ScheduleVisitProps {
 }
 
 interface VisitFormData {
-  patientId: string
+  patientIds: string[]
   doctorId: string
   doctorName: string
   specialty: string
@@ -57,7 +57,7 @@ const timeSlots = [
 
 export default function ScheduleVisit({ isOpen, onClose, patient, patients = [], onSuccess }: ScheduleVisitProps) {
   const [formData, setFormData] = useState<VisitFormData>({
-    patientId: '',
+    patientIds: [],
     doctorId: '',
     doctorName: '',
     specialty: '',
@@ -69,7 +69,8 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     notes: ''
   })
   
-  const [selectedPatientId, setSelectedPatientId] = useState('')
+  const [selectedPatientIds, setSelectedPatientIds] = useState<string[]>([])
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false)
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [doctorsLoading, setDoctorsLoading] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -80,16 +81,16 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
   useEffect(() => {
     if (isOpen) {
       if (patient) {
-        setSelectedPatientId(patient.id)
-        setFormData(prev => ({ ...prev, patientId: patient.id }))
+        setSelectedPatientIds([patient.id])
+        setFormData(prev => ({ ...prev, patientIds: [patient.id] }))
       } else {
-        // If no patient is pre-selected, default to the first patient in the list or empty
-        const defaultPatientId = patients.length > 0 ? patients[0].id : ''
-        setSelectedPatientId(defaultPatientId)
-        setFormData(prev => ({ ...prev, patientId: defaultPatientId }))
+        // Reset to empty selection for multiple patient selection
+        setSelectedPatientIds([])
+        setFormData(prev => ({ ...prev, patientIds: [] }))
       }
       setShowValidation(false)
       setValidationErrors([])
+      setShowPatientDropdown(false)
       fetchDoctors()
     }
   }, [isOpen, patient, patients])
@@ -99,7 +100,22 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     if (showValidation) {
       setValidationErrors(getValidationErrors())
     }
-  }, [formData, selectedPatientId, showValidation])
+  }, [formData, selectedPatientIds, showValidation])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
+      if (showPatientDropdown && !target.closest('.patient-dropdown')) {
+        setShowPatientDropdown(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showPatientDropdown])
 
   // Fetch doctors when modal opens
   const fetchDoctors = async () => {
@@ -114,18 +130,18 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     }
   }
 
-  // Get the currently selected patient
-  const currentPatient = patient || patients.find(p => p.id === selectedPatientId) || patients.find(p => p.id === formData.patientId) || null
+  // Get the currently selected patients
+  const selectedPatients = patient ? [patient] : patients.filter(p => selectedPatientIds.includes(p.id))
 
   // Get current validation errors
   const getValidationErrors = () => {
     const errors: string[] = []
     
-    // Check if we have a patient (either passed as prop or selected from dropdown)
-    const hasValidPatient = patient || (selectedPatientId && patients.find(p => p.id === selectedPatientId))
+    // Check if we have patients (either passed as prop or selected from dropdown)
+    const hasValidPatients = patient || (selectedPatientIds.length > 0)
     
-    if (!hasValidPatient) {
-      errors.push('Please select a patient')
+    if (!hasValidPatients) {
+      errors.push('Please select at least one patient')
     }
     if (!formData.doctorId) {
       errors.push('Please select a doctor')
@@ -145,11 +161,11 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
 
   // Form validation - check if all required fields are filled
   const isFormValid = () => {
-    // Check if we have a patient (either passed as prop or selected from dropdown)
-    const hasValidPatient = patient || (selectedPatientId && patients.find(p => p.id === selectedPatientId))
+    // Check if we have patients (either passed as prop or selected from dropdown)
+    const hasValidPatients = patient || (selectedPatientIds.length > 0)
     
     const valid = (
-      hasValidPatient && // Patient must be selected
+      hasValidPatients && // Patients must be selected
       formData.doctorId && // Doctor must be selected
       formData.date && // Date must be selected
       formData.time && // Time must be selected
@@ -167,13 +183,34 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     }))
   }
 
-  const handlePatientSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const patientId = e.target.value
-    setSelectedPatientId(patientId)
+  const handlePatientToggle = (patientId: string) => {
+    const isSelected = selectedPatientIds.includes(patientId)
+    let newSelectedIds: string[]
+    
+    if (isSelected) {
+      newSelectedIds = selectedPatientIds.filter(id => id !== patientId)
+    } else {
+      newSelectedIds = [...selectedPatientIds, patientId]
+    }
+    
+    setSelectedPatientIds(newSelectedIds)
     setFormData(prev => ({
       ...prev,
-      patientId
+      patientIds: newSelectedIds
     }))
+  }
+
+  const handleSelectAllPatients = () => {
+    if (selectedPatientIds.length === patients.length) {
+      // Clear all selections
+      setSelectedPatientIds([])
+      setFormData(prev => ({ ...prev, patientIds: [] }))
+    } else {
+      // Select all patients
+      const allPatientIds = patients.map(p => p.id)
+      setSelectedPatientIds(allPatientIds)
+      setFormData(prev => ({ ...prev, patientIds: allPatientIds }))
+    }
   }
 
   const handleDoctorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -192,9 +229,9 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     e.preventDefault()
     
     // Validate required fields and show specific error messages
-    const hasValidPatient = patient || (selectedPatientId && patients.find(p => p.id === selectedPatientId))
-    if (!hasValidPatient) {
-      alert('Please select a patient')
+    const hasValidPatients = patient || (selectedPatientIds.length > 0)
+    if (!hasValidPatients) {
+      alert('Please select at least one patient')
       return
     }
     
@@ -221,28 +258,44 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     setIsLoading(true)
     
     try {
-      // Get the actual patient to use for appointment data
-      const selectedPatient = patient || patients.find(p => p.id === selectedPatientId)
+      // Get the patients to schedule appointments for
+      const patientsToSchedule = patient ? [patient] : patients.filter(p => selectedPatientIds.includes(p.id))
       
-      // Prepare appointment data for backend
-      const appointmentData = {
-        patient_id: selectedPatient!.id,
-        doctor_id: formData.doctorId,
-        appointment_date: formData.date,
-        appointment_time: formData.time,
-        symptoms: formData.symptoms,
-        reason: formData.currentDisease || formData.symptoms,
-        priority: formData.urgencyLevel,
-        notes: formData.notes || '',
-        is_first_visit: selectedPatient!.isFirstTime
-      }
-
-      console.log('Submitting appointment:', appointmentData)
-
-      // Call backend API to create appointment
-      const response = await apiClient.createAppointmentByStaff(appointmentData)
+      console.log(`Scheduling appointments for ${patientsToSchedule.length} patients`)
       
-      console.log('Appointment created:', response)
+      // Create appointments for each selected patient
+      const appointmentPromises = patientsToSchedule.map(async (selectedPatient, index) => {
+        // For multiple patients, stagger the time by 15 minutes each
+        const baseTime = formData.time
+        const [hours, minutes] = baseTime.split(':').map(Number)
+        const totalMinutes = hours * 60 + minutes + (index * 15) // Add 15 minutes for each additional patient
+        const adjustedHours = Math.floor(totalMinutes / 60)
+        const adjustedMinutes = totalMinutes % 60
+        const adjustedTime = `${adjustedHours.toString().padStart(2, '0')}:${adjustedMinutes.toString().padStart(2, '0')}`
+        
+        // Prepare appointment data for backend
+        const appointmentData = {
+          patient_id: selectedPatient.id,
+          doctor_id: formData.doctorId,
+          appointment_date: formData.date,
+          appointment_time: patientsToSchedule.length === 1 ? formData.time : adjustedTime,
+          symptoms: formData.symptoms,
+          reason: formData.currentDisease || formData.symptoms,
+          priority: formData.urgencyLevel,
+          notes: formData.notes || '',
+          is_first_visit: selectedPatient.isFirstTime
+        }
+
+        console.log(`Submitting appointment for ${selectedPatient.firstName} ${selectedPatient.lastName}:`, appointmentData)
+
+        // Call backend API to create appointment
+        return await apiClient.createAppointmentByStaff(appointmentData)
+      })
+      
+      // Wait for all appointments to be created
+      const responses = await Promise.all(appointmentPromises)
+      
+      console.log('All appointments created:', responses)
       
       // Call onSuccess callback to refresh data
       if (onSuccess) {
@@ -251,7 +304,7 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
       
       // Reset form
       setFormData({
-        patientId: '',
+        patientIds: [],
         doctorId: '',
         doctorName: '',
         specialty: '',
@@ -262,16 +315,20 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
         urgencyLevel: 'medium',
         notes: ''
       })
-      setSelectedPatientId('')
+      setSelectedPatientIds([])
       
       onClose()
       
       // Show success message
-      alert('Appointment scheduled successfully!')
+      const patientCount = patientsToSchedule.length
+      const message = patientCount === 1 
+        ? 'Appointment scheduled successfully!' 
+        : `${patientCount} appointments scheduled successfully!`
+      alert(message)
       
     } catch (error: any) {
-      console.error('Error scheduling visit:', error)
-      alert(`Error scheduling appointment: ${error.message || 'Unknown error'}`)
+      console.error('Error scheduling visits:', error)
+      alert(`Error scheduling appointments: ${error.message || 'Unknown error'}`)
     } finally {
       setIsLoading(false)
     }
@@ -317,23 +374,120 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
           </div>
         ) : (
           <div className="p-6 bg-gradient-to-r from-gray-50 to-blue-50 border-b border-gray-200">
-            <div className="flex items-center mb-4">
-              <FiUser className="h-5 w-5 text-gray-600 mr-2" />
-              <h3 className="font-semibold text-gray-900">Select Patient</h3>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <FiUser className="h-5 w-5 text-gray-600 mr-2" />
+                <h3 className="font-semibold text-gray-900">Select Patients</h3>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">
+                  {selectedPatientIds.length} selected
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSelectAllPatients}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  {selectedPatientIds.length === patients.length ? 'Clear All' : 'Select All'}
+                </button>
+              </div>
             </div>
-            <select
-              value={selectedPatientId}
-              onChange={handlePatientSelect}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            >
-              <option value="">Choose a patient</option>
-              {patients.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.firstName} {p.lastName} - {p.email}
-                </option>
-              ))}
-            </select>
+            
+            {/* Custom Dropdown */}
+            <div className="relative patient-dropdown">
+              <button
+                type="button"
+                onClick={() => setShowPatientDropdown(!showPatientDropdown)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-left flex items-center justify-between"
+              >
+                <span className="text-gray-700">
+                  {selectedPatientIds.length === 0
+                    ? 'Choose patients'
+                    : selectedPatientIds.length === 1
+                    ? `${patients.find(p => p.id === selectedPatientIds[0])?.firstName} ${patients.find(p => p.id === selectedPatientIds[0])?.lastName}`
+                    : `${selectedPatientIds.length} patients selected`}
+                </span>
+                <FiChevronDown 
+                  className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${
+                    showPatientDropdown ? 'rotate-180' : ''
+                  }`} 
+                />
+              </button>
+              
+              {/* Dropdown Content */}
+              {showPatientDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                  {patients.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">
+                      No patients available
+                    </div>
+                  ) : (
+                    patients.map(p => {
+                      const isSelected = selectedPatientIds.includes(p.id)
+                      return (
+                        <div
+                          key={p.id}
+                          className={`flex items-center p-3 border-b border-gray-100 last:border-b-0 cursor-pointer hover:bg-gray-50 ${
+                            isSelected ? 'bg-blue-50' : ''
+                          }`}
+                          onClick={() => handlePatientToggle(p.id)}
+                        >
+                          <div className="flex items-center justify-center w-5 h-5 mr-3">
+                            {isSelected && (
+                              <FiCheck className="h-4 w-4 text-blue-600" />
+                            )}
+                          </div>
+                          <div className="flex items-center flex-1">
+                            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-xs mr-3">
+                              {p.firstName[0]}{p.lastName[0]}
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 text-sm">
+                                {p.firstName} {p.lastName}
+                              </p>
+                              <p className="text-xs text-gray-600">{p.email}</p>
+                            </div>
+                          </div>
+                          {p.isFirstTime && (
+                            <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                              First Time
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {selectedPatientIds.length > 1 && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Appointments will be scheduled at 15-minute intervals starting from the selected time.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Selected Patients Summary */}
+        {!patient && selectedPatientIds.length > 0 && (
+          <div className="px-6 pt-4 pb-2">
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4">
+              <h4 className="font-semibold text-gray-900 mb-2">Selected Patients ({selectedPatients.length})</h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedPatients.map(p => (
+                  <span
+                    key={p.id}
+                    className="inline-flex items-center px-3 py-1 bg-white border border-blue-200 rounded-full text-sm"
+                  >
+                    <div className="w-4 h-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mr-2"></div>
+                    {p.firstName} {p.lastName}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -511,7 +665,13 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
                   Scheduling...
                 </div>
               ) : (
-                'Schedule Visit'
+                patient 
+                  ? 'Schedule Visit' 
+                  : selectedPatientIds.length === 1 
+                    ? 'Schedule Visit'
+                    : selectedPatientIds.length > 1
+                      ? `Schedule ${selectedPatientIds.length} Visits`
+                      : 'Schedule Visit'
               )}
             </button>
           </div>

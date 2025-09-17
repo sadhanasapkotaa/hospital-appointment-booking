@@ -300,7 +300,7 @@ export default function ReceptionistDashboard() {
 
         {/* Quick Actions */}
         <div className="mb-8 fade-in">
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 mb-4">
             <button
               onClick={() => setIsAddPatientModalOpen(true)}
               className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center space-x-2"
@@ -320,8 +320,14 @@ export default function ReceptionistDashboard() {
               className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center space-x-2"
             >
               <FiCalendar size={18} />
-              <span>Schedule Visit</span>
+              <span>Schedule Visits</span>
             </button>
+          </div>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+            {/* <p className="text-sm text-blue-800">
+              <strong>💡 Tip:</strong> You can now schedule appointments for multiple patients at once! 
+              Use "Schedule Visits" to select multiple patients, or click the calendar icon on individual patient cards for single appointments.
+            </p> */}
           </div>
         </div>
 
@@ -385,7 +391,7 @@ export default function ReceptionistDashboard() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Patient Management</h2>
-                <p className="text-sm text-gray-600">Quick actions for patient scheduling</p>
+                <p className="text-sm text-gray-600">Schedule visits for individual patients or multiple patients at once</p>
               </div>
             </div>
 
@@ -436,7 +442,7 @@ export default function ReceptionistDashboard() {
                       <button
                         onClick={() => handleAssignVisitClick(patient)}
                         className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors text-xs font-medium"
-                        title="Schedule Visit"
+                        title="Schedule Visit for this Patient"
                       >
                         <FiCalendar size={14} />
                       </button>
