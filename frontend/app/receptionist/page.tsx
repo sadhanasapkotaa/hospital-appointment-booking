@@ -6,6 +6,7 @@ import ScheduleVisit from "../../components/ScheduleVisit";
 import { authHelpers, apiClient } from '../api/api';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { TimerManager } from '../utils/timerUtils';
 
 interface Patient {
   id: string
@@ -150,9 +151,23 @@ export default function ReceptionistDashboard() {
   }
 
   const handleMarkAsArrived = (visitId: string) => {
-    setVisits(visits.map(v => 
-      v.id === visitId ? { ...v, status: 'arrived' as const } : v
-    ))
+    setVisits(visits.map(v => {
+      if (v.id === visitId) {
+        // Start the timer when marking as arrived
+        const patient = patients.find(p => p.id === v.patientId)
+        if (patient) {
+          TimerManager.startTimer(
+            visitId,
+            v.patientId,
+            `${patient.firstName} ${patient.lastName}`,
+            v.doctorId,
+            v.doctorName
+          )
+        }
+        return { ...v, status: 'arrived' as const }
+      }
+      return v
+    }))
   }
 
   const handleCancelVisit = (visitId: string) => {

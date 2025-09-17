@@ -1,5 +1,5 @@
 // API Configuration and Services
-const API_BASE_URL = 'https://friendly-space-trout-xq5jrxgp446hprw-8000.app.github.dev/api/';
+const API_BASE_URL = 'http://127.0.0.1:8000/api/';
 
 // Types
 export interface User {
@@ -118,7 +118,9 @@ class APIClient {
       ...(options.headers as Record<string, string>),
     };
 
-    if (this.token) {
+    // Don't send token for login/register endpoints
+    const isAuthEndpoint = endpoint === 'login/' || endpoint === 'register/';
+    if (this.token && !isAuthEndpoint) {
       headers['Authorization'] = `Token ${this.token}`;
     }
 
@@ -156,7 +158,7 @@ class APIClient {
 
   // Authentication Methods
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await this.makeRequest('auth/login/', {
+    const response = await this.makeRequest('login/', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
@@ -166,7 +168,7 @@ class APIClient {
   }
 
   async register(userData: RegisterRequest): Promise<LoginResponse> {
-    const response = await this.makeRequest('auth/register/', {
+    const response = await this.makeRequest('register/', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -177,7 +179,7 @@ class APIClient {
 
   async logout(): Promise<void> {
     try {
-      await this.makeRequest('auth/logout/', {
+      await this.makeRequest('logout/', {
         method: 'POST',
       });
     } finally {
@@ -186,12 +188,12 @@ class APIClient {
   }
 
   async getProfile(): Promise<User> {
-    return await this.makeRequest('auth/profile/');
+    return await this.makeRequest('profile/');
   }
 
   // Doctor Methods
   async getDoctors(): Promise<any> {
-    return await this.makeRequest('auth/doctors/');
+    return await this.makeRequest('doctors/');
   }
 
   // Appointment Methods
@@ -240,14 +242,14 @@ class APIClient {
     chronicConditions?: string;
     isFirstTime: boolean;
   }): Promise<any> {
-    return await this.makeRequest('auth/add-patient/', {
+    return await this.makeRequest('add-patient/', {
       method: 'POST',
       body: JSON.stringify(patientData),
     });
   }
 
   async getPatients(): Promise<any> {
-    return await this.makeRequest('auth/patients/');
+    return await this.makeRequest('patients/');
   }
 
   async createAppointment(appointmentData: {

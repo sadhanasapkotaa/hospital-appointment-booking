@@ -50,6 +50,7 @@ def login_user(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def logout_user(request):
     """
     Logout user and delete token
@@ -59,12 +60,13 @@ def logout_user(request):
         return Response({
             'message': 'Logout successful'
         }, status=status.HTTP_200_OK)
-    except:
+    except Exception:
         return Response({
             'error': 'Something went wrong'
         }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def user_profile(request):
     """
     Get current user profile

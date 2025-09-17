@@ -5,6 +5,8 @@ import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiLogOut, FiActivity, FiHe
 import PatientDetailsModal from '@/components/PatientDetailsModal'
 import { apiClient, authHelpers } from '../api/api'
 import { useRouter } from 'next/navigation'
+import { TimerManager, PatientTimer } from '../utils/timerUtils'
+import PatientTimerComponent from '../../components/PatientTimer'
 
 interface Patient {
   id: string
@@ -73,6 +75,8 @@ export default function DoctorDashboard() {
   const [activeTimer, setActiveTimer] = useState<string | null>(null)
   const [timerSeconds, setTimerSeconds] = useState<{[key: string]: number}>({})
   const [showTimeAlert, setShowTimeAlert] = useState<string | null>(null)
+  const [patientTimers, setPatientTimers] = useState<PatientTimer[]>([])
+  const [timerUpdateTrigger, setTimerUpdateTrigger] = useState(0)
 
   // Logout handler
   const handleLogout = async () => {
@@ -136,6 +140,65 @@ export default function DoctorDashboard() {
     fetchDashboardData()
   }, [])
 
+  // Load and sync patient timers
+  useEffect(() => {
+    const loadTimers = () => {
+      if (doctor?.id) {
+        const doctorTimers = TimerManager.getDoctorTimers(doctor.id.toString())
+        setPatientTimers(doctorTimers)
+      }
+    }
+
+    // Load timers initially
+    loadTimers()
+
+    // Set up interval to sync timers every second
+    const interval = setInterval(loadTimers, 1000)
+
+    return () => clearInterval(interval)
+  }, [doctor?.id, timerUpdateTrigger])
+
+  const handleTimerUpdate = () => {
+    setTimerUpdateTrigger(prev => prev + 1)
+  }
+
+  const handleAddPrescriptionFromTimer = (visitId: string) => {
+    const visit = visits.find(v => v.id === visitId)
+    if (visit) {
+      const patient = patients.find(p => p.id === visit.patientId)
+      if (patient) {
+        handleViewPatient(patient, visit)
+      } else {
+        console.error(`Could not find patient for visitId: ${visitId}`)
+        setError(`Could not open prescription form: Patient not found.`)
+      }
+    } else {
+      console.error(`Could not find visit for visitId: ${visitId}`)
+      setError(`Could not open prescription form: Visit not found.`)
+    }
+  }
+
+  const handleMarkAsArrived = (visitId: string) => {
+    setVisits(visits.map(v => {
+      if (v.id === visitId) {
+        // Find the patient for this visit
+        const patient = patients.find(p => p.id === v.patientId)
+        if (patient) {
+          // Start the timer when marking as arrived
+          TimerManager.startTimer(
+            visitId,
+            v.patientId,
+            `${patient.firstName} ${patient.lastName}`,
+            v.doctorId,
+            v.doctorName
+          )
+        }
+        return { ...v, status: 'arrived' as const }
+      }
+      return v
+    }))
+  }
+
   const handleViewPatient = (patient: Patient, visit: Visit) => {
     setSelectedPatient(patient)
     setSelectedVisit(visit)
@@ -176,10 +239,12 @@ export default function DoctorDashboard() {
       // Update appointment status to completed
       await updateAppointmentStatus(prescriptionData.visitId, 'completed', prescriptionData.treatmentNotes)
       
-      // Stop timer if active
+      // Stop timer if active (both old and new timer systems)
       if (activeTimer === prescriptionData.visitId) {
         setActiveTimer(null)
       }
+      // Stop the patient timer when appointment is completed
+      TimerManager.stopTimer(prescriptionData.visitId)
       
       // Refresh dashboard data to show updated records
       const data = await apiClient.getDoctorDashboard()
@@ -307,7 +372,7 @@ export default function DoctorDashboard() {
 
   // Separate all appointments by status
   const pendingAppointments = allVisitsWithPatients.filter(v => 
-    ['scheduled', 'confirmed'].includes(v.status)
+    ['scheduled', 'confirmed', 'arrived', 'in_progress'].includes(v.status)
   )
   const completedAppointments = allVisitsWithPatients.filter(v => 
     v.status === 'completed'
@@ -366,9 +431,9 @@ export default function DoctorDashboard() {
                   {doctor ? `${doctor.name} (${doctor.specialization})` : 'Loading...'}
                 </span>
               </div>
-              <button 
+              <button
                 onClick={handleLogout}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center space-x-2"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-2 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
               >
                 <FiLogOut size={16} />
                 <span>Logout</span>
@@ -417,7 +482,7 @@ export default function DoctorDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-1">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
             <div className="flex items-center">
               <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg">
                 <FiUsers className="h-6 w-6 text-white" />
@@ -429,7 +494,7 @@ export default function DoctorDashboard() {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-2">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
             <div className="flex items-center">
               <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg">
                 <FiCalendar className="h-6 w-6 text-white" />
@@ -441,7 +506,7 @@ export default function DoctorDashboard() {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-3">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
             <div className="flex items-center">
               <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg">
                 <FiUserCheck className="h-6 w-6 text-white" />
@@ -453,7 +518,7 @@ export default function DoctorDashboard() {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 fade-in stagger-4">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
             <div className="flex items-center">
               <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg">
                 <FiCheckCircle className="h-6 w-6 text-white" />
@@ -476,10 +541,40 @@ export default function DoctorDashboard() {
           </div>
         )}
 
-        {/* Main Content Grid */}
+        {/* Active Patient Timers - Coexists with other content */}
+        {patientTimers.length > 0 && (
+          <div className="mb-8">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-white/20">
+              <div className="flex items-center mb-6">
+                <div className="p-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl mr-3">
+                  <FiClock className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Active Consultation Timers</h2>
+                  <p className="text-sm text-gray-600">Patients currently being consulted</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {patientTimers.map((timer) => (
+                  <PatientTimerComponent
+                    key={timer.visitId}
+                    timer={timer}
+                    onTimerUpdate={handleTimerUpdate}
+                    onAddPrescription={handleAddPrescriptionFromTimer}
+                    showPatientName={true}
+                    compact={false}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content Grid - Always displayed */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* All Appointments */}
-          <div className="hover:scale-105 transition-transform duration-300 fade-in stagger-2">
+          <div>
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
               <div className="flex items-center mb-6">
                 <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl mr-3">
@@ -506,7 +601,7 @@ export default function DoctorDashboard() {
                     <div>
                       <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
                         <FiClock className="mr-2" size={18} />
-                        Pending Appointments ({pendingAppointments.length})
+                        Active Appointments ({pendingAppointments.length})
                       </h3>
                       <div className="space-y-3">
                         {pendingAppointments.map((visit) => (
@@ -524,6 +619,10 @@ export default function DoctorDashboard() {
                                   <div className="flex items-center mt-1">
                                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(visit.status)}`}>
                                       {visit.status.charAt(0).toUpperCase() + visit.status.slice(1)}
+                                      {/* Show timer indicator if active */}
+                                      {patientTimers.find(t => t.visitId === visit.id) && (
+                                        <FiClock className="ml-1" size={12} />
+                                      )}
                                     </span>
                                     <span className={`ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                       visit.patient!.isFirstTime 
@@ -544,6 +643,16 @@ export default function DoctorDashboard() {
                               </div>
                               <div className="flex items-center space-x-3">
                                 <div className="flex space-x-2">
+                                  {/* Show Mark as Arrived button only for scheduled appointments */}
+                                  {visit.status === 'scheduled' && (
+                                    <button
+                                      onClick={() => handleMarkAsArrived(visit.id)}
+                                      className="p-2 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-200 transition-colors"
+                                      title="Mark as Arrived"
+                                    >
+                                      <FiUserCheck size={16} />
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleViewPatient(visit.patient!, visit)}
                                     className="p-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition-colors"
@@ -570,6 +679,21 @@ export default function DoctorDashboard() {
                                   <strong>Notes:</strong> {visit.notes}
                                 </p>
                               )}
+                              
+                              {/* Show timer if patient has arrived */}
+                              {(() => {
+                                const timer = patientTimers.find(t => t.visitId === visit.id)
+                                return timer ? (
+                                  <div className="mt-3">
+                                    <PatientTimerComponent
+                                      timer={timer}
+                                      onTimerUpdate={handleTimerUpdate}
+                                      showPatientName={false}
+                                      compact={true}
+                                    />
+                                  </div>
+                                ) : null
+                              })()}
                             </div>
                           </div>
                         ))}
@@ -627,7 +751,7 @@ export default function DoctorDashboard() {
           </div>
 
           {/* Available Time Slots */}
-          <div className="hover:scale-105 transition-transform duration-300 fade-in stagger-3">
+          <div className="fade-in stagger-3">
             <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
               <div className="flex items-center mb-6">
                 <div className="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded-xl mr-3">
@@ -662,19 +786,25 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
-        {/* Medical Records Section */}
-        {!loading && !error && (
-          <div className="mt-8 hover:scale-105 transition-transform duration-300 fade-in stagger-4">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
-              <div className="flex items-center mb-6">
+        {/* Medical Records Section - Always visible */}
+        <div className="mt-8 fade-in stagger-4">
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
                 <div className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl mr-3">
                   <FiFileText className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">Medical Records</h2>
-                  <p className="text-sm text-gray-600">Past patient records and prescriptions</p>
+                  <p className="text-sm text-gray-600">Completed patient consultations and prescriptions</p>
                 </div>
               </div>
+              {medicalHistory.length > 0 && (
+                <div className="text-sm text-gray-500">
+                  {medicalHistory.length} record{medicalHistory.length !== 1 ? 's' : ''}
+                </div>
+              )}
+            </div>
               
               {medicalHistory.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-gray-400">
@@ -737,7 +867,6 @@ export default function DoctorDashboard() {
               )}
             </div>
           </div>
-        )}
           </>
         )}
       </main>
