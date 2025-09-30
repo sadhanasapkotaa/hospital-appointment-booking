@@ -14,6 +14,17 @@ export interface User {
   date_joined: string;
 }
 
+// Generic API Response type
+export interface APIResponse<T = unknown> {
+  message?: string;
+  data?: T;
+  error?: string;
+  results?: T[];
+  count?: number;
+  next?: string;
+  previous?: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -76,6 +87,23 @@ export interface TimeSlot {
   is_booked: boolean;
 }
 
+export interface Patient {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  dateOfBirth: string;
+  gender: string;
+  address: string;
+  emergencyContact: string;
+  emergencyPhone: string;
+  bloodGroup?: string;
+  allergies?: string;
+  chronicConditions?: string;
+  isFirstTime: boolean;
+}
+
 // API Client Class
 class APIClient {
   private baseURL: string;
@@ -107,10 +135,10 @@ class APIClient {
     }
   }
 
-  private async makeRequest(
+  private async makeRequest<T = unknown>(
     endpoint: string,
     options: RequestInit = {}
-  ): Promise<any> {
+  ): Promise<APIResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
     
     const headers: Record<string, string> = {
@@ -158,23 +186,31 @@ class APIClient {
 
   // Authentication Methods
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const response = await this.makeRequest('login/', {
+    const response = await this.makeRequest<LoginResponse>('login/', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
     
-    this.setToken(response.token);
-    return response;
+    // Handle both direct response and nested data structure
+    const loginData = response.data || response as unknown as LoginResponse;
+    if ('token' in loginData) {
+      this.setToken(loginData.token);
+    }
+    return loginData;
   }
 
   async register(userData: RegisterRequest): Promise<LoginResponse> {
-    const response = await this.makeRequest('register/', {
+    const response = await this.makeRequest<LoginResponse>('register/', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
     
-    this.setToken(response.token);
-    return response;
+    // Handle both direct response and nested data structure
+    const loginData = response.data || response as unknown as LoginResponse;
+    if ('token' in loginData) {
+      this.setToken(loginData.token);
+    }
+    return loginData;
   }
 
   async logout(): Promise<void> {
@@ -188,29 +224,44 @@ class APIClient {
   }
 
   async getProfile(): Promise<User> {
-    return await this.makeRequest('profile/');
+    const response = await this.makeRequest<User>('profile/');
+    return this.extractData(response);
+  }
+
+  // Helper method to extract data from API response
+  private extractData<T>(response: APIResponse<T>): T {
+    if (response.results) {
+      return response.results as unknown as T;
+    }
+    if (response.data) {
+      return response.data;
+    }
+    return response as unknown as T;
   }
 
   // Doctor Methods
-  async getDoctors(): Promise<any> {
-    return await this.makeRequest('doctors/');
+  async getDoctors(): Promise<Doctor[]> {
+    const response = await this.makeRequest<Doctor[]>('doctors/');
+    return this.extractData(response);
   }
 
   // Appointment Methods
-  async getAppointments(): Promise<any> {
-    return await this.makeRequest('bookings/appointments/');
+  async getAppointments(): Promise<Appointment[]> {
+    const response = await this.makeRequest<Appointment[]>('bookings/appointments/');
+    return this.extractData(response);
   }
 
   // Doctor Dashboard Methods
-  async getDoctorDashboard(): Promise<any> {
+  async getDoctorDashboard(): Promise<APIResponse<{ appointments: Appointment[], stats: any }>> {
     return await this.makeRequest('bookings/doctor/dashboard/');
   }
 
-  async updateAppointmentStatus(appointmentId: number, status: string, notes?: string): Promise<any> {
-    return await this.makeRequest(`bookings/appointments/${appointmentId}/update-status/`, {
+  async updateAppointmentStatus(appointmentId: number, status: string, notes?: string): Promise<Appointment> {
+    const response = await this.makeRequest<Appointment>(`bookings/appointments/${appointmentId}/update-status/`, {
       method: 'PUT',
       body: JSON.stringify({ status, notes }),
     });
+    return this.extractData(response);
   }
 
   async createMedicalRecord(recordData: {
@@ -220,95 +271,49 @@ class APIClient {
     doctor_notes: string;
     follow_up_date?: string | null;
   }): Promise<any> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return await this.makeRequest('bookings/medical-records/', {
       method: 'POST',
       body: JSON.stringify(recordData),
     });
   }
 
-  // Patient Management Methods
-  async addPatient(patientData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    dateOfBirth: string;
-    gender: string;
-    address: string;
-    emergencyContact: string;
-    emergencyPhone: string;
-    bloodGroup?: string;
-    allergies?: string;
-    chronicConditions?: string;
-    isFirstTime: boolean;
-  }): Promise<any> {
-    return await this.makeRequest('add-patient/', {
+  // Patient Methods
+  async addPatient(patientData: Omit<Patient, 'id'>): Promise<{ patient: Patient }> {
+    const response = await this.makeRequest<{ patient: Patient }>('patients/add/', {
       method: 'POST',
       body: JSON.stringify(patientData),
     });
+    return this.extractData(response);
   }
 
-  async getPatients(): Promise<any> {
-    return await this.makeRequest('patients/');
+  async getPatients(): Promise<Patient[]> {
+    const response = await this.makeRequest<Patient[]>('patients/');
+    return this.extractData(response);
   }
 
-  async createAppointment(appointmentData: {
-    doctor: number;
-    appointment_date: string;
-    appointment_time: string;
-    symptoms: string;
-    priority: string;
-    reason: string;
-    notes?: string;
-  }): Promise<any> {
-    return await this.makeRequest('bookings/appointments/create/', {
+  async getPatient(patientId: string): Promise<Patient> {
+    const response = await this.makeRequest<Patient>(`patients/${patientId}/`);
+    return this.extractData(response);
+  }
+
+  async createAppointment(appointmentData: any): Promise<Appointment> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await this.makeRequest<Appointment>('bookings/appointments/create/', {
       method: 'POST',
       body: JSON.stringify(appointmentData),
     });
+    return this.extractData(response);
   }
 
-  async createAppointmentByStaff(appointmentData: {
-    patient_id: string;
-    doctor_id: string;
-    appointment_date: string;
-    appointment_time: string;
-    symptoms: string;
-    reason: string;
-    priority: string;
-    notes?: string;
-    is_first_visit?: boolean;
-  }): Promise<any> {
-    return await this.makeRequest('bookings/appointments/create-by-staff/', {
-      method: 'POST',
-      body: JSON.stringify(appointmentData),
-    });
+  // Receptionist Methods
+  async getReceptionistDashboard(): Promise<any> {
+    return await this.makeRequest('bookings/receptionist/dashboard/');
   }
 
-  async getAppointmentById(id: number): Promise<Appointment> {
-    return await this.makeRequest(`bookings/appointments/${id}/`);
-  }
-
-  async updateAppointment(id: number, appointmentData: Partial<Appointment>): Promise<Appointment> {
-    return await this.makeRequest(`bookings/appointments/${id}/`, {
-      method: 'PUT',
-      body: JSON.stringify(appointmentData),
-    });
-  }
-
-  async cancelAppointment(id: number): Promise<void> {
-    await this.makeRequest(`bookings/appointments/${id}/`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Time Slot Methods
-  async getAvailableTimeSlots(doctorId?: number, date?: string): Promise<TimeSlot[]> {
-    const params = new URLSearchParams();
-    if (doctorId) params.append('doctor', doctorId.toString());
-    if (date) params.append('date', date);
-    
-    const query = params.toString() ? `?${params.toString()}` : '';
-    return await this.makeRequest(`bookings/time-slots/${query}`);
+  // Admin Methods
+  async getAdminDashboard(): Promise<any> {
+    return await this.makeRequest('bookings/admin/dashboard/');
   }
 
   // Utility Methods

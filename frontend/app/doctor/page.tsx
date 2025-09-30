@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { FaUser, FaClock, FaCalendarCheck, FaStethoscope, FaPlay, FaPause, FaStop } from 'react-icons/fa'
-import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiLogOut, FiActivity, FiHeart, FiEye, FiFileText, FiPlay, FiPause, FiUserCheck } from "react-icons/fi"
+import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiLogOut, FiHeart, FiEye, FiFileText, FiUserCheck } from "react-icons/fi"
 import PatientDetailsModal from '@/components/PatientDetailsModal'
 import { apiClient, authHelpers } from '../api/api'
 import { useRouter } from 'next/navigation'
@@ -73,8 +72,6 @@ export default function DoctorDashboard() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null)
   const [activeTimer, setActiveTimer] = useState<string | null>(null)
-  const [timerSeconds, setTimerSeconds] = useState<{[key: string]: number}>({})
-  const [showTimeAlert, setShowTimeAlert] = useState<string | null>(null)
   const [patientTimers, setPatientTimers] = useState<PatientTimer[]>([])
   const [timerUpdateTrigger, setTimerUpdateTrigger] = useState(0)
 
@@ -220,7 +217,14 @@ export default function DoctorDashboard() {
     }
   }
 
-    const handleSavePrescription = async (prescriptionData: any) => {
+    const handleSavePrescription = async (prescriptionData: {
+    visitId: string;
+    diagnosis: string;
+    treatmentNotes: string;
+    prescriptions: { medication: string; dosage: string; frequency: string; duration: string; instructions: string; }[];
+    followUpRequired: boolean;
+    followUpDate: string;
+  }) => {
     try {
       // Format prescriptions into a single string
       const prescriptionText = prescriptionData.prescriptions.map((p: any) => 
@@ -247,75 +251,24 @@ export default function DoctorDashboard() {
       TimerManager.stopTimer(prescriptionData.visitId)
       
       // Refresh dashboard data to show updated records
-      const data = await apiClient.getDoctorDashboard()
-      setDoctor(data.doctor || null)
-      setPatients(data.patients || [])
-      setVisits(data.visits || [])
-      setMedicalHistory(data.medicalHistory || [])
-      setStats(data.stats || {
-        totalPatients: 0,
-        todayAppointments: 0,
-        arrivedPatients: 0,
-        completedToday: 0
-      })
+      const data = await apiClient.getDoctorDashboard();
+      if (data.data) {
+        setDoctor(data.data.doctor || null);
+        setPatients(data.data.patients || []);
+        setVisits(data.data.visits || []);
+        setMedicalHistory(data.data.medicalHistory || []);
+        setStats(data.data.stats || {
+          total_appointments: 0,
+          pending_appointments: 0,
+          completed_appointments: 0,
+          average_consultation_time: '0h 0m'
+        });
+      }
       
     } catch (error) {
       console.error('Error saving prescription:', error)
       setError('Failed to save prescription. Please try again.')
     }
-  }
-
-  // Timer functions
-  const startTimer = (visitId: string) => {
-    setActiveTimer(visitId)
-    setTimerSeconds(prev => ({ ...prev, [visitId]: prev[visitId] || 0 }))
-    
-    // Mark visit as in progress
-    setVisits(visits.map(v => 
-      v.id === visitId ? { ...v, status: 'in_progress' as const } : v
-    ))
-  }
-
-  const pauseTimer = () => {
-    setActiveTimer(null)
-  }
-
-  const resetTimer = (visitId: string) => {
-    setTimerSeconds(prev => ({ ...prev, [visitId]: 0 }))
-    setActiveTimer(null)
-    setShowTimeAlert(null)
-  }
-
-  // Timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout
-    
-    if (activeTimer) {
-      interval = setInterval(() => {
-        setTimerSeconds(prev => {
-          const newSeconds = (prev[activeTimer] || 0) + 1
-          
-          // Show alert at 15 minutes (900 seconds)
-          if (newSeconds === 900) {
-            setShowTimeAlert(activeTimer)
-            setTimeout(() => setShowTimeAlert(null), 5000) // Hide after 5 seconds
-          }
-          
-          return { ...prev, [activeTimer]: newSeconds }
-        })
-      }, 1000)
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval)
-    }
-  }, [activeTimer])
-
-  // Format timer display
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
   // Function to get status color classes
@@ -366,9 +319,9 @@ export default function DoctorDashboard() {
     })
 
   // Get today's visits for statistics
-  const todayVisitsWithPatients = allVisitsWithPatients.filter(v => 
-    v.date === new Date().toISOString().split('T')[0]
-  )
+  // const todayVisitsWithPatients = allVisitsWithPatients.filter(v => 
+  //   v.date === today && v.status !== 'cancelled'
+  // )
 
   // Separate all appointments by status
   const pendingAppointments = allVisitsWithPatients.filter(v => 
@@ -377,12 +330,6 @@ export default function DoctorDashboard() {
   const completedAppointments = allVisitsWithPatients.filter(v => 
     v.status === 'completed'
   )
-  const cancelledAppointments = allVisitsWithPatients.filter(v => 
-    ['cancelled', 'no_show'].includes(v.status)
-  )
-
-  // Get waiting room patients (arrived status - if this status exists)
-  const waitingRoomPatients = todayVisitsWithPatients.filter(v => v.status === 'arrived')
 
   // Helper function to format date for display
   const formatDisplayDate = (dateString: string) => {
@@ -500,7 +447,7 @@ export default function DoctorDashboard() {
                 <FiCalendar className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Today's Appointments</p>
+                <p className="text-sm font-medium text-gray-600">Today&apos;s Appointments</p>
                 <p className="text-2xl font-bold text-gray-900">{todayAppointments}</p>
               </div>
             </div>
@@ -530,16 +477,6 @@ export default function DoctorDashboard() {
             </div>
           </div>
         </div>
-
-        {/* Time Alert */}
-        {showTimeAlert && (
-          <div className="mb-6 p-4 bg-red-100 border border-red-300 rounded-lg text-red-800 fade-in">
-            <div className="flex items-center">
-              <FiClock className="mr-2" />
-              <span className="font-medium">15 minutes completed for current consultation!</span>
-            </div>
-          </div>
-        )}
 
         {/* Active Patient Timers - Coexists with other content */}
         {patientTimers.length > 0 && (

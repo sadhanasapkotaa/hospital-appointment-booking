@@ -1,9 +1,9 @@
-'use client'
+'use client';
 import React, { useState } from "react";
-import { FiCalendar, FiClock, FiCheckCircle, FiUsers, FiLogOut, FiFilter, FiSearch, FiHeart, FiTrash2, FiPlus, FiUserPlus, FiEdit3, FiUserCheck } from "react-icons/fi";
+import { FiCalendar, FiClock, FiCheckCircle, FiUser, FiEdit3, FiTrash2, FiSearch, FiFilter, FiLogOut, FiHeart, FiUserPlus, FiMapPin, FiUserCheck } from "react-icons/fi";
 import AddPatientModal from "../../components/AddPatientModal";
 import ScheduleVisit from "../../components/ScheduleVisit";
-import { authHelpers, apiClient } from '../api/api';
+import { authHelpers, apiClient, Appointment } from '../api/api';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { TimerManager } from '../utils/timerUtils';
@@ -40,9 +40,42 @@ interface Visit {
   status: 'scheduled' | 'arrived' | 'in_progress' | 'completed' | 'cancelled'
 }
 
-
-
 export default function ReceptionistDashboard() {
+  // Sample data - this would normally come from an API
+  const appointmentsData: Appointment[] = [
+    {
+      id: 1,
+      patient_name: "John Doe",
+      patient_email: "john@email.com", 
+      patient_phone: "+1234567890",
+      doctor_name: "Dr. Sarah Johnson",
+      doctor_specialization: "Cardiology",
+      appointment_date: "2024-03-15",
+      appointment_time: "10:00",
+      status: "confirmed",
+      priority: "medium",
+      symptoms: "Chest pain",
+      is_first_visit: false,
+      created_at: "2024-03-10T09:00:00Z"
+    }
+  ];
+
+  // Example mapping logic (adjust as needed for your Visit type)
+  const visitsData = appointmentsData.map((appointment) => ({
+    id: appointment.id.toString(),
+    patientId: appointment.patient_name || '',
+    doctorId: appointment.doctor_name || '',
+    doctorName: appointment.doctor_name || 'Dr. Unknown',
+    specialty: appointment.doctor_specialization || 'General',
+    date: appointment.appointment_date,
+    time: appointment.appointment_time,
+    symptoms: appointment.symptoms || '',
+    currentDisease: appointment.symptoms || '',
+    urgencyLevel: appointment.priority,
+    notes: appointment.notes || '',
+    // Map 'confirmed' to 'scheduled' if needed, otherwise use appointment.status
+    status: appointment.status === 'confirmed' ? 'scheduled' : appointment.status,
+  }));
   const router = useRouter()
   const [patients, setPatients] = useState<Patient[]>([])
   const [visits, setVisits] = useState<Visit[]>([])
@@ -79,7 +112,7 @@ export default function ReceptionistDashboard() {
       const response = await apiClient.getPatients()
       setPatients(response.patients || [])
       setError('')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching patients:', err)
       setError('Failed to load patients')
     } finally {
@@ -92,34 +125,31 @@ export default function ReceptionistDashboard() {
       const appointmentsResponse = await apiClient.getAppointments()
       
       // Handle both array and object responses
-      let appointmentsData = []
-      if (Array.isArray(appointmentsResponse)) {
-        appointmentsData = appointmentsResponse
-      } else if (appointmentsResponse && appointmentsResponse.appointments) {
-        appointmentsData = appointmentsResponse.appointments
-      } else if (appointmentsResponse && typeof appointmentsResponse === 'object') {
-        // If it's a single appointment object, wrap it in an array
-        appointmentsData = [appointmentsResponse]
-      }
+      // appointmentsResponse is now properly typed as Appointment[]
+      const appointmentsData = Array.isArray(appointmentsResponse) ? appointmentsResponse : []
       
-      const visitsData = appointmentsData.map((appointment: any) => ({
+      const visitsData = appointmentsData.map((appointment: Appointment) => ({
         id: appointment.id.toString(),
-        patientId: appointment.patient ? appointment.patient.toString() : appointment.patient_id ? appointment.patient_id.toString() : '',
-        doctorId: appointment.doctor ? appointment.doctor.toString() : appointment.doctor_id ? appointment.doctor_id.toString() : '',
+        patientId: appointment.patient_name || '',
+        doctorId: appointment.doctor_name || '',
         doctorName: appointment.doctor_name || 'Dr. Unknown',
-        specialty: appointment.doctor_specialization || appointment.specialty || 'General',
+        specialty: appointment.doctor_specialization || 'General',
         date: appointment.appointment_date,
         time: appointment.appointment_time,
-        symptoms: appointment.symptoms || appointment.reason || '',
-        currentDisease: appointment.reason || appointment.symptoms || '',
-        urgencyLevel: appointment.priority || 'normal',
+        symptoms: appointment.symptoms || '',
+        currentDisease: appointment.symptoms || '',
+        urgencyLevel: appointment.priority || 'medium',
         notes: appointment.notes || '',
-        status: appointment.status || 'scheduled'
+        status: appointment.status === 'confirmed' ? 'scheduled' : (
+          ['scheduled', 'completed', 'cancelled', 'arrived', 'in_progress'].includes(appointment.status)
+            ? appointment.status as Visit["status"]
+            : 'scheduled'
+        )
       }))
       
       setVisits(visitsData)
       setAppointmentsError('')
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching appointments:', err)
       setAppointmentsError('Failed to load appointments')
     } finally {
@@ -387,7 +417,7 @@ export default function ReceptionistDashboard() {
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
             <div className="flex items-center mb-6">
               <div className="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded-xl mr-3">
-                <FiUsers className="h-6 w-6 text-white" />
+                <FiUser className="h-6 w-6 text-white" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Patient Management</h2>
@@ -403,7 +433,7 @@ export default function ReceptionistDashboard() {
             ) : error ? (
               <div className="flex flex-col items-center justify-center py-12 text-red-500">
                 <div className="w-16 h-16 bg-gradient-to-r from-red-100 to-red-200 rounded-full flex items-center justify-center mb-4">
-                  <FiUsers size={24} />
+                  <FiUser size={24} />
                 </div>
                 <p className="text-sm font-medium">{error}</p>
                 <p className="text-xs text-red-400 mt-1">Please try again later</p>
@@ -411,7 +441,7 @@ export default function ReceptionistDashboard() {
             ) : patients.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                 <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4">
-                  <FiUsers size={24} />
+                  <FiUser size={24} />
                 </div>
                 <p className="text-sm font-medium">No patients registered</p>
                 <p className="text-xs text-gray-400 mt-1">Add patients to start scheduling visits</p>
@@ -461,7 +491,7 @@ export default function ReceptionistDashboard() {
           <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/20">
             <div className="flex items-center mb-6">
               <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl mr-3">
-                <FiUsers className="h-6 w-6 text-white" />
+                <FiUser className="h-6 w-6 text-white" />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Appointment Management</h2>

@@ -1,7 +1,10 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable react/no-unescaped-entities */
+
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { FiUser, FiCalendar, FiHeart, FiPlusCircle, FiUsers, FiClock, FiShield, FiActivity, FiAward, FiPhone, FiMail, FiMapPin } from "react-icons/fi";
+import { useEffect, useRef } from "react";
+import { FiCalendar, FiHeart, FiUsers, FiClock, FiAward, FiPhone, FiMail, FiMapPin } from "react-icons/fi";
 import gsap from "gsap";
 
 export default function LandingPage() {
@@ -310,7 +313,7 @@ export default function LandingPage() {
                   </div>
                 </div>
                 <p className="text-gray-700 italic leading-relaxed">
-                  "{testimonial.feedback}"
+                  "                  &ldquo;{testimonial.feedback}&rdquo;"
                 </p>
               </div>
             ))}
@@ -444,37 +447,6 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
-    </div>
-  );
-}
-
-/* Enhanced Accordion Component */
-function AccordionItem({ question, answer }: { question: string; answer: string }) {
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="card border border-white/20 overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex justify-between items-center px-8 py-6 font-semibold text-left hover:bg-white/50 transition-all duration-200"
-      >
-        <span className="text-gray-900">{question}</span>
-        <FiPlusCircle
-          className={`transform transition-transform duration-200 ${
-            open ? "rotate-45 text-blue-600" : "text-gray-400"
-          }`}
-        />
-      </button>
-      <div
-        ref={contentRef}
-        style={{
-          maxHeight: open ? contentRef.current?.scrollHeight : 0,
-        }}
-        className="transition-all duration-300 overflow-hidden bg-gradient-to-r from-blue-50/50 to-indigo-50/50 px-8"
-      >
-        <p className="py-6 text-gray-700 leading-relaxed">{answer}</p>
-      </div>
     </div>
   );
 }

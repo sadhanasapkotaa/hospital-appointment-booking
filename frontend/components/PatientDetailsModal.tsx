@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { FiX, FiUser, FiCalendar, FiFileText, FiClock, FiHeart, FiAlertCircle } from 'react-icons/fi'
+import { FiX, FiUser, FiCalendar, FiFileText, FiHeart } from 'react-icons/fi'
 
 interface Patient {
   id: string
@@ -61,7 +61,14 @@ interface PatientDetailsModalProps {
   patient: Patient | null
   visit: Visit | null
   medicalHistory: MedicalHistory[]
-  onSavePrescription: (prescription: any) => void
+  onSavePrescription: (prescription: {
+    visitId: string;
+    diagnosis: string;
+    treatmentNotes: string;
+    prescriptions: Prescription[];
+    followUpRequired: boolean;
+    followUpDate: string | undefined;
+  }) => void
   doctor?: { id: number, name: string, specialization: string, email: string } | null
 }
 

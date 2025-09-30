@@ -94,8 +94,7 @@ export default function SignUpPage() {
       } else {
         router.push('/');
       }
-    } catch (error) {
-      console.error('Registration error:', error);
+    } catch (error: unknown) {
       let errorMessage = 'Registration failed. Please try again.';
       
       if (error instanceof Error) {
@@ -104,6 +103,8 @@ export default function SignUpPage() {
         } else {
           errorMessage = error.message;
         }
+      } else {
+        errorMessage = 'An unexpected error occurred.';
       }
       
       setError(errorMessage);

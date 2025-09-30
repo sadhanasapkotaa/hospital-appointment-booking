@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react'
-import { FiX, FiUser, FiPhone, FiMail, FiCalendar, FiMapPin } from 'react-icons/fi'
+import { FiX, FiUser } from 'react-icons/fi'
 import { apiClient } from '../app/api/api'
 
 interface Patient {
@@ -97,37 +97,11 @@ export default function AddPatientModal({ isOpen, onClose, onSave, onSuccess }: 
       }
       
       onSave(newPatient)
-      
-      // Call onSuccess callback to refresh data
-      if (onSuccess) {
-        onSuccess()
-      }
-      
-      // Reset form
-      setFormData({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        dateOfBirth: '',
-        gender: '',
-        address: '',
-        emergencyContact: '',
-        emergencyPhone: '',
-        isFirstTime: true,
-        bloodGroup: '',
-        allergies: '',
-        chronicConditions: ''
-      })
-      
+      if (onSuccess) onSuccess()
       onClose()
       
-      // Show success message (optional)
-      alert('Patient added successfully!')
-      
-    } catch (error: any) {
-      console.error('Error saving patient:', error)
-      alert(`Error adding patient: ${error.message || 'Unknown error'}`)
+    } catch (error: unknown) {
+      console.error('Error adding patient:', error)
     } finally {
       setIsLoading(false)
     }

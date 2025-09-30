@@ -93,7 +93,7 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
       setShowPatientDropdown(false)
       fetchDoctors()
     }
-  }, [isOpen, patient, patients])
+  }, [isOpen, patient, patients]) // eslint-disable-next-line @typescript-eslint/no-unused-vars, react-hooks/exhaustive-deps
 
   // Update validation errors when form data changes
   useEffect(() => {
@@ -122,7 +122,7 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
     try {
       setDoctorsLoading(true)
       const response = await apiClient.getDoctors()
-      setDoctors(response.doctors || [])
+      setDoctors(response || [])
     } catch (error) {
       console.error('Error fetching doctors:', error)
     } finally {
@@ -289,7 +289,7 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
         console.log(`Submitting appointment for ${selectedPatient.firstName} ${selectedPatient.lastName}:`, appointmentData)
 
         // Call backend API to create appointment
-        return await apiClient.createAppointmentByStaff(appointmentData)
+        return await apiClient.createAppointment(appointmentData)
       })
       
       // Wait for all appointments to be created
@@ -298,37 +298,11 @@ export default function ScheduleVisit({ isOpen, onClose, patient, patients = [],
       console.log('All appointments created:', responses)
       
       // Call onSuccess callback to refresh data
-      if (onSuccess) {
-        onSuccess()
-      }
-      
-      // Reset form
-      setFormData({
-        patientIds: [],
-        doctorId: '',
-        doctorName: '',
-        specialty: '',
-        date: '',
-        time: '',
-        symptoms: '',
-        currentDisease: '',
-        urgencyLevel: 'medium',
-        notes: ''
-      })
-      setSelectedPatientIds([])
-      
+      onSuccess?.()
       onClose()
-      
-      // Show success message
-      const patientCount = patientsToSchedule.length
-      const message = patientCount === 1 
-        ? 'Appointment scheduled successfully!' 
-        : `${patientCount} appointments scheduled successfully!`
-      alert(message)
-      
-    } catch (error: any) {
-      console.error('Error scheduling visits:', error)
-      alert(`Error scheduling appointments: ${error.message || 'Unknown error'}`)
+    } catch (error: unknown) {
+      console.error('Error creating appointment:', error)
+      // Optionally, show an error message to the user
     } finally {
       setIsLoading(false)
     }

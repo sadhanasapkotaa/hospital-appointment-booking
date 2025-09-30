@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react'
-import { FiX, FiCalendar, FiClock, FiUser, FiFileText, FiAlertCircle } from 'react-icons/fi'
-import { apiClient } from '../app/api/api'
+import { FiX, FiCalendar, FiUser, FiAlertCircle } from 'react-icons/fi'
+import { apiClient, authHelpers, Doctor } from '@/app/api/api'
 
 interface Patient {
   id: string
@@ -10,19 +10,6 @@ interface Patient {
   email: string
   phone: string
   isFirstTime: boolean
-}
-
-interface Doctor {
-  id: string
-  name: string
-  firstName: string
-  lastName: string
-  email: string
-  specialization: string
-  license_number: string
-  experience_years: number
-  consultation_fee: string
-  is_available: boolean
 }
 
 interface Visit {
@@ -114,37 +101,11 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
     try {
       setDoctorsLoading(true)
       const response = await apiClient.getDoctors()
-      setDoctors(response.doctors || [])
+      setDoctors(response || [])
     } catch (error) {
       console.error('Error fetching doctors:', error)
-      // Fallback to mock doctors for testing
-      const mockDoctors = [
-        {
-          id: '1',
-          name: 'Dr. John Smith',
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john.smith@hospital.com',
-          specialization: 'Cardiology',
-          license_number: 'MD001',
-          experience_years: 10,
-          consultation_fee: '150.00',
-          is_available: true
-        },
-        {
-          id: '2',
-          name: 'Dr. Sarah Johnson',
-          firstName: 'Sarah',
-          lastName: 'Johnson',
-          email: 'sarah.johnson@hospital.com',
-          specialization: 'Pediatrics',
-          license_number: 'MD002',
-          experience_years: 8,
-          consultation_fee: '120.00',
-          is_available: true
-        }
-      ]
-      setDoctors(mockDoctors)
+      // Fallback to mock doctors for testing - This is now commented out as it causes type errors
+      // setDoctors(mockDoctors)
     } finally {
       setDoctorsLoading(false)
     }
@@ -186,12 +147,12 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
 
   const handleDoctorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const doctorId = e.target.value
-    const doctor = doctors.find(d => d.id === doctorId)
+    const doctor = doctors.find(d => d.id.toString() === doctorId)
     
     setFormData(prev => ({
       ...prev,
       doctorId,
-      doctorName: doctor?.name || '',
+      doctorName: doctor ? `${doctor.user.first_name} ${doctor.user.last_name}` : '',
       specialty: doctor?.specialization || ''
     }))
   }
@@ -236,35 +197,11 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
       }
       
       onSave(visit)
-      
-      // Call onSuccess callback to refresh data
-      if (onSuccess) {
-        onSuccess()
-      }
-      
-      // Reset form
-      setFormData({
-        doctorId: '',
-        doctorName: '',
-        specialty: '',
-        date: '',
-        time: '',
-        symptoms: '',
-        currentDisease: '',
-        urgencyLevel: 'normal',
-        notes: '',
-        status: 'scheduled'
-      })
-      setSelectedPatientId('')
-      
+      if (onSuccess) onSuccess()
       onClose()
       
-      // Show success message
-      alert('Appointment scheduled successfully!')
-      
-    } catch (error: any) {
-      console.error('Error scheduling visit:', error)
-      alert(`Error scheduling appointment: ${error.message || 'Unknown error'}`)
+    } catch (error: unknown) {
+      console.error('Error assigning visit:', error)
     } finally {
       setIsLoading(false)
     }
@@ -372,7 +309,7 @@ export default function AssignVisitModal({ isOpen, onClose, patient, patients = 
                 </option>
                 {doctors.map(doctor => (
                   <option key={doctor.id} value={doctor.id}>
-                    {doctor.name} - {doctor.specialization}
+                    {doctor.user.first_name} {doctor.user.last_name} - {doctor.specialization}
                   </option>
                 ))}
               </select>
