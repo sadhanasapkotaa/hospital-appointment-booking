@@ -49,16 +49,16 @@ const isDoctor = (user: User): user is Doctor => {
   return 'specialty' in user && 'experience' in user;
 };
 
-const isPatientData = (data: any): data is Patient => {
-  return Boolean(data.name && data.email && data.phone && data.age && data.gender && data.address);
+const isPatientData = (data: unknown): data is Patient => {
+  return Boolean(data && typeof data === 'object' && 'name' in data && 'email' in data && 'phone' in data && 'age' in data && 'gender' in data && 'address' in data);
 };
 
-const isReceptionistData = (data: any): data is Receptionist => {
-  return Boolean(data.name && data.email && data.phone && data.department && data.shift);
+const isReceptionistData = (data: unknown): data is Receptionist => {
+  return Boolean(data && typeof data === 'object' && 'name' in data && 'email' in data && 'phone' in data && 'department' in data && 'shift' in data);
 };
 
-const isDoctorData = (data: any): data is Doctor => {
-  return Boolean(data.name && data.email && data.phone && data.specialty && data.experience);
+const isDoctorData = (data: unknown): data is Doctor => {
+  return Boolean(data && typeof data === 'object' && 'name' in data && 'email' in data && 'phone' in data && 'specialty' in data && 'experience' in data);
 };
 
 export default function AdminDashboard() {
@@ -67,6 +67,11 @@ export default function AdminDashboard() {
   const [modalType, setModalType] = useState<ModalType>("add");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [formData, setFormData] = useState<Partial<User>>({});
+
+  // Helper functions for type-safe form data access
+  const getPatientFormData = (data: Partial<User>): Partial<Patient> => data as Partial<Patient>;
+  const getReceptionistFormData = (data: Partial<User>): Partial<Receptionist> => data as Partial<Receptionist>;
+  const getDoctorFormData = (data: Partial<User>): Partial<Doctor> => data as Partial<Doctor>;
 
   // Sample data - in real app, this would come from an API
   const [patients, setPatients] = useState<Patient[]>([
@@ -376,7 +381,7 @@ export default function AdminDashboard() {
                         <input
                           type="number"
                           name="age"
-                          value={(formData as any).age || ''}
+                          value={getPatientFormData(formData).age || ''}}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           placeholder="Age"
@@ -391,7 +396,7 @@ export default function AdminDashboard() {
                         </label>
                         <select
                           name="gender"
-                          value={(formData as any).gender || ''}
+                          value={getPatientFormData(formData).gender || ''}}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           required
@@ -409,7 +414,7 @@ export default function AdminDashboard() {
                       </label>
                       <textarea
                         name="address"
-                        value={(formData as any).address || ''}
+                        value={getPatientFormData(formData).address || ''}}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Enter full address"
@@ -429,7 +434,7 @@ export default function AdminDashboard() {
                       </label>
                       <select
                         name="department"
-                        value={(formData as any).department || ''}
+                        value={getReceptionistFormData(formData).department || ''}}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
@@ -448,7 +453,7 @@ export default function AdminDashboard() {
                       </label>
                       <select
                         name="shift"
-                        value={(formData as any).shift || ''}
+                        value={getReceptionistFormData(formData).shift || ''}}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
@@ -471,7 +476,7 @@ export default function AdminDashboard() {
                       </label>
                       <select
                         name="specialty"
-                        value={(formData as any).specialty || ''}
+                        value={getDoctorFormData(formData).specialty || ''}}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
@@ -494,7 +499,7 @@ export default function AdminDashboard() {
                       </label>
                       <select
                         name="experience"
-                        value={(formData as any).experience || ''}
+                        value={getDoctorFormData(formData).experience || ''}}}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         required
@@ -645,7 +650,7 @@ export default function AdminDashboard() {
           {/* Tabs */}
           <div className="bg-gradient-to-r from-gray-50 to-white px-6 py-1">
             <div className="flex space-x-1">
-              {["patients", "receptionists", "doctors"].map((tab) => (
+              {(["patients", "receptionists", "doctors"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}

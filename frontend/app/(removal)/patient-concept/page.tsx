@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { FiCalendar, FiClock, FiUser, FiLogOut, FiPlus, FiHeart, FiTrash2 } from "react-icons/fi";
 import { authHelpers } from '../../api/api';
