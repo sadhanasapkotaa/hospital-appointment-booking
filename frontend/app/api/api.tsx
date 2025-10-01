@@ -1,5 +1,5 @@
 // API Configuration and Services
-const API_BASE_URL = 'https://hospital-appointment-booking-ed4i.onrender.com/';
+const API_BASE_URL = 'https://hospital-appointment-booking-ed4i.onrender.com/api/';
 
 // Types
 export interface User {
