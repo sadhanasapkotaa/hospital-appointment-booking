@@ -134,6 +134,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "https://friendly-space-trout-xq5jrxgp446hprw-3000.app.github.dev",
     "https://hospital-appointment-booking-ed4i.onrender.com",
+    "https://hospital-appointment-booking-bzfa.vercel.app",
+    "https://hospital-appointment-booking-bzfa-pwayvsyym.vercel.app",
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https://.*\.github\.dev$",
