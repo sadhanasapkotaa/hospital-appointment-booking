@@ -13,6 +13,7 @@ export interface User {
   is_active: boolean;
   date_joined: string;
 }
+// demo comment
 
 // Generic API Response type
 export interface APIResponse<T = unknown> {
