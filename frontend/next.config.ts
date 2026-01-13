@@ -1,13 +1,10 @@
-import type { NextConfig } from "next";
-
+import type { NextConfig } from 'next'
+ 
+// Next.js 16 - turbopack at the top level of nextConfig
 const nextConfig: NextConfig = {
-    eslint: {
-    // ❌ Disable ESLint checks during `next build`
-    ignoreDuringBuilds: true,
+  turbopack: {
+    // options
   },
-   typescript: {
-    ignoreBuildErrors: true, // ✅ Skip type checking errors
-  },
-};
-
-export default nextConfig;
+}
+ 
+export default nextConfig
