@@ -7,7 +7,7 @@
     "build": "cross-env TSC_COMPILE_ON_ERROR=true next build",
     "start": "next start",
     "lint": "eslint",
-    "prepare": "husky"
+    "prepare": "cd.. && husky ./frontend/.husky"
   },
   "dependencies": {
     "gsap": "^3.13.0",
