@@ -1,10 +1,20 @@
-import type { NextConfig } from 'next'
- 
-// Next.js 16 - turbopack at the top level of nextConfig
+import type { NextConfig } from 'next';
+
 const nextConfig: NextConfig = {
-  turbopack: {
-    // options
+  sassOptions: {
+    loadPaths: ['app/styles'],
   },
-}
- 
-export default nextConfig
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https', // Only allow HTTPS images for security
+        hostname: '**', // '**' is a wildcard that matches ANY domain
+      },
+    ],
+    unoptimized: true, // Disables Next.js image optimization to allow any source
+    // WARNING: This removes many performance benefits
+  },
+  experimental: { viewTransition: true },
+};
+
+export default nextConfig;
