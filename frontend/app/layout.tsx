@@ -1,28 +1,27 @@
-import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Poppins } from 'next/font/google';
+import { ReactNode } from 'react';
+import './globals.css';
 
 const poppins = Poppins({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["latin"],
-  variable: "--font-poppins",
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  variable: '--font-poppins',
 });
 
 export const metadata: Metadata = {
-  title: "HealthPal - Hospital Appointment System",
-  description: "Comprehensive hospital appointment management system",
+  title: 'HealthPal - Hospital Appointment System',
+  description: 'Comprehensive hospital appointment management system',
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${poppins.variable} font-sans antialiased`}
-      >
+      <body className={`${poppins.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>

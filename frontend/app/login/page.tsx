@@ -1,8 +1,8 @@
 'use client'
-import React, { useState } from 'react'
-import { FaUser, FaUserMd, FaEye, FaEyeSlash } from 'react-icons/fa'
-import { authHelpers } from '../api/api'
 import { useRouter } from 'next/navigation'
+import React, { useState } from 'react'
+import { FaEye, FaEyeSlash, FaUser, FaUserMd } from 'react-icons/fa'
+import { authHelpers } from '../api/api'
 
 const LoginPage = () => {
   const router = useRouter()
