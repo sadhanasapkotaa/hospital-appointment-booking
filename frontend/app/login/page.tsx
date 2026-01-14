@@ -35,7 +35,7 @@ const LoginPage = () => {
         user_type: activeTab
       })
 
-      console.log('Login successful:', response)
+      // console.log('Login successful:', response)
       
       // Redirect based on user type
       if (response.user.user_type === 'staff') {
